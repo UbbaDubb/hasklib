@@ -17,6 +17,7 @@ CTestTestfile.cmake
 Testing/
 
 # Editor / IDE
+.vscode/
 .vs/
 *.user
 
