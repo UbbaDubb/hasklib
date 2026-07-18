@@ -113,7 +113,6 @@ with $Z\sim\mathcal N(0,1)$. This substitution is the single bridge
 between the continuous theory here and the discrete simulation code.
 \end{remark}
 
-\begin{proof}
 Although the paths are continuous, they are extremely rough. Fix $t$ and
 consider the difference quotient over a step $h>0$. By the Gaussian-increment
 property, $W_{t+h}-W_t \sim \mathcal{N}(0,h)$, equivalently $\sqrt{h}\,Z$ with
@@ -133,7 +132,6 @@ interval, so integrals $\int f\,\dd W_s$ cannot be defined pathwise as
 Riemann--Stieltjes integrals. Its \emph{quadratic} variation, however, is
 finite --- the content of \cref{sec:qv} --- and it is precisely this finite
 second-order variation that the It\^o integral and It\^o's lemma are built on.
-\end{proof}
 
 %--------------------------------------------------------------
 \section{Quadratic variation}\label{sec:qv}
@@ -261,17 +259,6 @@ Equation~\eqref{eq:sde} is exactly what the \texttt{StochasticProcess}
 base class encodes: \texttt{drift(t,x)} returns $\drift(t,x)$ and
 \texttt{diffusion(t,x)} returns $\diff(t,x)$. Every concrete process
 (GBM, OU, CIR) is a choice of these two functions.
-\end{remark}
-
-\begin{remark}[Correspondence with Brigo's lecture notes]
-The lecture notes write the same SDE as
-$\dd X_t = f(t,X_t)\dt + \sigma(t,X_t)\dW$; here the drift is $\drift$ and
-the diffusion $\diff$, matching the \texttt{StochasticProcess} accessors.
-The quadratic variation is written with angle brackets $\langle W\rangle$ in
-both (we carry the horizon $T$, the notes use $t$). One symbol clash is worth
-signposting: the $C^{1,2}$ test function in It\^o's lemma (\cref{thm:ito}) is
-$f$ here but $\phi$ in the notes, whereas the notes' $f$ is our \emph{drift}
-$\drift$. The mathematics is identical; only the letters differ.
 \end{remark}
 
 \begin{assumption}[Existence and uniqueness]
