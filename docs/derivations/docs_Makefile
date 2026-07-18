@@ -1,0 +1,31 @@
+# docs/Makefile
+# Builds the hasklib mathematical companion files against the shared
+# bibliography (refs.bib). Separate from the top-level CMake build —
+# this only concerns docs/.
+#
+# Usage (from inside docs/):
+#   make            build every .tex file present
+#   make clean      remove LaTeX build artifacts
+#   make distclean  also remove the built PDFs
+
+TEXFILES := $(wildcard *.tex)
+PDFS     := $(TEXFILES:.tex=.pdf)
+
+.PHONY: all clean distclean
+
+all: $(PDFS)
+
+# Full loop: pdflatex -> bibtex -> pdflatex x2, so citations (\cite) and
+# cross-references (\cref) both resolve.
+%.pdf: %.tex refs.bib
+	pdflatex -interaction=nonstopmode $< > /dev/null
+	bibtex $(basename $<) > /dev/null || true
+	pdflatex -interaction=nonstopmode $< > /dev/null
+	pdflatex -interaction=nonstopmode $<
+
+clean:
+	rm -f *.aux *.log *.out *.toc *.bbl *.blg *.fls *.fdb_latexmk \
+	      *.synctex.gz *.run.xml *.zref *.nav *.snm
+
+distclean: clean
+	rm -f $(PDFS)

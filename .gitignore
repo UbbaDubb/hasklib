@@ -24,3 +24,18 @@ Testing/
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# LaTeX build artifacts (docs/ — math companion files)
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.run.xml
+*.zref
+*.nav
+*.snm
