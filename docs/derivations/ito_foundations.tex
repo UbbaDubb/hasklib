@@ -6,7 +6,7 @@
 %  framework, Ito's lemma, quadratic variation.
 %
 %  This file is the base every other derivation file references
-%  (gbm.tex, ou.tex, cir.tex, schemes.tex all cite results here),
+%  (gbm.tex, ou.tex, abm.tex, cir.tex, schemes.tex all cite results here),
 %  exactly as every process class inherits from Process.hpp.
 %
 %  Scope discipline: include a result ONLY if a piece of hasklib
@@ -81,7 +81,7 @@ probability-space setup, Brownian motion, the general It\^o SDE
 $\dd X_t = \drift(t,X_t)\dt + \diff(t,X_t)\dW$ (encoded by the
 \texttt{StochasticProcess} interface), It\^o's lemma, and quadratic
 variation. Downstream files (\texttt{gbm.tex}, \texttt{ou.tex},
-\texttt{cir.tex}, \texttt{schemes.tex}) cite the results established
+\texttt{abm.tex}, \texttt{cir.tex}, \texttt{schemes.tex}) cite the results established
 here. Standard measure-theoretic probability is assumed; see
 \citeasnoun{shreve2004} or \citeasnoun{williams1991} for construction.
 \end{abstract}
@@ -391,6 +391,10 @@ depends on:
         \texttt{test\_stochastic.cpp}).
   \item \texttt{ou.tex}: $\drift=\kappa(\theta-x),\ \diff=\sigma$
         $\Rightarrow$ Gaussian solution, mean/variance, stationary law.
+  \item \texttt{abm.tex}: $\drift=\mu,\ \diff=\sigma$ $\Rightarrow$
+        exact solution by direct integration (no It\^o's lemma needed);
+        the $\kappa=0$ degenerate case of \texttt{ou.tex}, plus a
+        drift.
   \item \texttt{cir.tex}: $\drift=\kappa(\theta-x),\ \diff=\sigma\sqrt{x}$
         $\Rightarrow$ moments, Feller condition, motivation for full
         truncation.

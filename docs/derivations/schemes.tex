@@ -1,0 +1,329 @@
+%==============================================================
+%  schemes.tex
+%  hasklib — mathematical companion / derivations
+%
+%  Numerical schemes for simulating an Ito SDE: Euler-Maruyama now;
+%  Milstein to be added once Milstein.hpp/.cpp exist (same file,
+%  code and math built together, matching library convention).
+%
+%  Cites ito_foundations.tex for the SDE framework and the
+%  Gaussian-increment property of Brownian motion.
+%
+%  Scope discipline: only Euler-Maruyama is derived here, because
+%  only Euler-Maruyama exists as verified code so far
+%  (EulerMaruyama::step / simulate_terminal, tested against GBM's
+%  exact sampler in test_stochastic.cpp).
+%==============================================================
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{bm}
+\usepackage{xcolor}
+\usepackage{harvard}   % Harvard author-date referencing (with agsm.bst)
+
+%---------------- notation macros (matching ito_foundations.tex) ----------------
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Qmeas}{\mathbb{Q}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\filt}{\mathcal{F}}
+\newcommand{\Om}{\Omega}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\dW}{\dd W_t}
+\newcommand{\dt}{\dd t}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\drift}{a}
+\newcommand{\diff}{b}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+\newcommand{\TODO}[1]{\medskip\noindent\textbf{[\textcolor{red}{TO DERIVE}: #1]}\medskip}
+
+%==============================================================
+\title{Numerical Schemes for SDE Simulation: Euler--Maruyama\\
+       \large \texttt{hasklib} mathematical companion}
+\author{Hubert}
+\date{\today}
+%==============================================================
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note derives the Euler--Maruyama scheme for simulating an
+It\^o SDE, connects it directly to
+\texttt{EulerMaruyama::step}/\texttt{simulate\_terminal}, and states
+its strong-order convergence result. It builds on the SDE framework
+and Brownian motion properties established in
+\texttt{ito\_foundations.tex}. The Milstein scheme is deliberately
+omitted here and will be appended once \texttt{Milstein.hpp/.cpp}
+exist, keeping code and derivation paired throughout the library.
+\end{abstract}
+
+%--------------------------------------------------------------
+\section{Setup: the problem discretisation solves}
+%--------------------------------------------------------------
+
+Recall from \texttt{ito\_foundations.tex} the general It\^o SDE
+\[
+   \dd X_t = \drift(t,X_t)\,\dt + \diff(t,X_t)\,\dW.
+\]
+Integrating exactly over one interval $[t,\,t+\Delta t]$ gives
+\begin{equation}\label{eq:exact-increment}
+   X_{t+\Delta t} - X_t
+   = \int_t^{t+\Delta t} \drift(s,X_s)\,\dd s
+   + \int_t^{t+\Delta t} \diff(s,X_s)\,\dd W_s.
+\end{equation}
+This is exact, but neither integral can be evaluated in closed form
+in general, since $\drift$ and $\diff$ depend on $X_s$, which itself
+moves randomly across the interval. Simulation requires an
+approximation of \eqref{eq:exact-increment}.
+
+%--------------------------------------------------------------
+\section{The Euler--Maruyama scheme}
+%--------------------------------------------------------------
+
+\begin{definition}[Euler--Maruyama update]\label{def:em}
+The Euler--Maruyama approximation freezes $\drift$ and $\diff$ at
+their values at the start of the interval and approximates
+\eqref{eq:exact-increment} by
+\begin{equation}\label{eq:em-approx}
+   \int_t^{t+\Delta t}\drift(s,X_s)\,\dd s \approx \drift(t,X_t)\,\Delta t,
+   \qquad
+   \int_t^{t+\Delta t}\diff(s,X_s)\,\dd W_s \approx \diff(t,X_t)\big(W_{t+\Delta t}-W_t\big).
+\end{equation}
+\end{definition}
+
+\begin{remark}[Why freezing at $t$: the defining choice of an explicit scheme]
+By the mean value theorem for integrals, there exists some
+$\xi\in[t,t+\Delta t]$ (depending on the whole path) with
+\[
+   \int_t^{t+\Delta t}\drift(s,X_s)\,\dd s = \drift(\xi,X_\xi)\,\Delta t
+   \quad\text{exactly.}
+\]
+This is an exact statement but a useless one, since $\xi$ and $X_\xi$
+are unknown until the interval has already been simulated. Euler--
+Maruyama's approximation is to replace the unknown midpoint value
+$\drift(\xi,X_\xi)$ with the \emph{known} left-endpoint value
+$\drift(t,X_t)$ --- valid to leading order because $\drift$ is
+continuous and the interval is short, so $\drift(\xi,X_\xi)$ differs
+from $\drift(t,X_t)$ by an amount that shrinks as $\Delta t\to0$
+(quantified in \Cref{sec:local-error} below). The diffusion
+approximation in \eqref{eq:em-approx} is the same idea applied to the
+stochastic integral: if $\diff(s,X_s)$ were genuinely constant over
+$[t,t+\Delta t]$, the stochastic integral would equal
+$\diff(t,X_t)(W_{t+\Delta t}-W_t)$ \emph{exactly}, so freezing it at
+the left endpoint is again a leading-order replacement of an unknown
+quantity by a known one.
+
+The choice of \emph{which} endpoint to freeze at is what separates
+explicit from implicit schemes. Freezing at $t$ means every quantity
+on the right of \eqref{eq:em-approx} is already known once we reach
+time $t$, so $X_{t+\Delta t}$ is computed by a single formula with no
+equation to solve. Freezing instead at the right endpoint
+$t+\Delta t$ (backward Euler) or at the midpoint would put the unknown
+$X_{t+\Delta t}$ (or an average involving it) on both sides of the
+update, requiring a root-find at every step. Explicitness is a
+computational convenience, not a mathematical requirement of the
+discretisation idea itself --- it is a choice about which known
+quantity approximates $\drift(\xi,X_\xi)$, and hasklib's Euler--
+Maruyama always chooses the one requiring no further work.
+\end{remark}
+
+Using the Gaussian-increment property of Brownian motion
+(\texttt{ito\_foundations.tex}, Definition~1), write
+$W_{t+\Delta t}-W_t = \sqrt{\Delta t}\,Z$ with $Z\sim\mathcal N(0,1)$.
+Substituting into \eqref{eq:em-approx} and \eqref{eq:exact-increment}
+gives the update rule:
+\begin{equation}\label{eq:em-update}
+   X_{t+\Delta t} \;\approx\; X_t + \drift(t,X_t)\,\Delta t
+                    + \diff(t,X_t)\sqrt{\Delta t}\,Z.
+\end{equation}
+
+\begin{remark}[Correspondence with the code]\label{rem:em-code}
+Equation~\eqref{eq:em-update} is exactly \texttt{EulerMaruyama::step}:
+\begin{verbatim}
+double EulerMaruyama::step(const StochasticProcess& process, double t,
+                            double x, double dt, double z) const
+{
+    double a = process.drift(t, x);
+    double b = process.diffusion(t, x);
+    return x + a * dt + b * std::sqrt(dt) * z;
+}
+\end{verbatim}
+Chaining \eqref{eq:em-update} across $N$ equal sub-intervals of
+$[0,T]$, with a fresh independent $Z_i$ drawn at each step (the
+independent-increments property of Brownian motion), is exactly
+\texttt{EulerMaruyama::simulate\_terminal}.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Why the approximation improves as $\Delta t\to 0$}\label{sec:local-error}
+%--------------------------------------------------------------
+
+The error introduced by \Cref{def:em} comes entirely from treating
+$\drift(s,X_s)$ and $\diff(s,X_s)$ as constant over $[t,t+\Delta t]$,
+when in fact $X_s$ moves within the interval. By the Brownian scaling
+argument in \texttt{ito\_foundations.tex} (the nowhere-differentiability
+discussion), that movement is of order $\sqrt{\Delta t}$, so the
+error made by freezing the coefficients should itself shrink as
+$\Delta t \to 0$.
+
+\begin{proposition}[One-step (local) mean-square error]\label{prop:local-error}
+Assume $\drift,\diff$ are Lipschitz and continuously differentiable in
+$x$. Writing $\varepsilon$ for the difference between the true
+increment \eqref{eq:exact-increment} and the Euler--Maruyama
+approximation \eqref{eq:em-approx} over one step of length
+$\Delta t$, started from the same $X_t$,
+\[
+   \E\big[\varepsilon^2\big] = O\big((\Delta t)^2\big),
+   \qquad\text{i.e. the root-mean-square local error is } O(\Delta t).
+\]
+\end{proposition}
+
+\begin{proof}[Heuristic derivation]
+Split $\varepsilon$ into its drift and diffusion contributions,
+$\varepsilon = \varepsilon_{\drift} + \varepsilon_{\diff}$, where
+\[
+   \varepsilon_{\drift} = \int_t^{t+\Delta t}\!\big(\drift(s,X_s)-\drift(t,X_t)\big)\dd s,
+   \qquad
+   \varepsilon_{\diff} = \int_t^{t+\Delta t}\!\big(\diff(s,X_s)-\diff(t,X_t)\big)\dd W_s.
+\]
+For $s\in[t,t+\Delta t]$, the true solution satisfies
+$X_s - X_t = \drift(t,X_t)(s-t) + \diff(t,X_t)(W_s-W_t) + \cdots$; the
+first term is $O(\Delta t)$ and the second is $O(\sqrt{\Delta t})$ in
+an $L^2$ sense (its variance is $\diff(t,X_t)^2(s-t)$), so the
+Brownian term dominates and $X_s-X_t = O(\sqrt{\Delta t})$. By the
+Lipschitz/differentiability assumption, both coefficient differences
+inherit this order:
+\[
+   \drift(s,X_s)-\drift(t,X_t) = O(\sqrt{\Delta t}), \qquad
+   \diff(s,X_s)-\diff(t,X_t)   = O(\sqrt{\Delta t}).
+\]
+\emph{Drift term.} Integrating a quantity of order $\sqrt{s-t}$ over
+$s\in[t,t+\Delta t]$ gives $\int_0^{\Delta t}\sqrt{u}\,\dd u =
+\tfrac23(\Delta t)^{3/2}$, so $\varepsilon_{\drift}=O\big((\Delta
+t)^{3/2}\big)$ pathwise --- already smaller than the diffusion
+contribution below, so it does not set the overall order.
+
+\emph{Diffusion term.} Here the integral is stochastic, so its size is
+governed by the (adapted) It\^o isometry --- the same fact used for
+the Moments of a Wiener Integral lemma in \texttt{ou.tex}, but for an
+integrand that is random and adapted rather than deterministic; see
+\citeasnoun{shreve2004} or \citeasnoun{oksendal2003} for this more
+general form:
+\[
+   \E\big[\varepsilon_{\diff}^2\big]
+     = \E\left[\int_t^{t+\Delta t}\!\big(\diff(s,X_s)-\diff(t,X_t)\big)^2\dd s\right]
+     \approx \int_t^{t+\Delta t} O(s-t)\,\dd s = O\big((\Delta t)^2\big),
+\]
+using $\E\big[(\diff(s,X_s)-\diff(t,X_t))^2\big]=O(s-t)$ from the
+$L^2$ bound above. So $\varepsilon_{\diff}$ has mean-square
+$O((\Delta t)^2)$, i.e.\ root-mean-square $O(\Delta t)$, which
+dominates the drift contribution and gives the proposition.
+\end{proof}
+
+\begin{remark}
+This is the mechanism, not yet the global result: a per-step error
+of root-mean-square order $\Delta t$ does not immediately give a
+global error of the same order, because the errors from different
+steps compound through the process's dependence on $X_t$ rather than
+simply adding. That compounding is the content of
+\Cref{thm:em-order} below.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Strong convergence}
+%--------------------------------------------------------------
+
+\begin{definition}[Strong convergence order]
+A scheme has \emph{strong order} $\gamma$ if there exists $C>0$,
+independent of the step size $\Delta t$, such that
+\[
+   \E\Big[\,\big|\hat X_T - X_T\big|\,\Big] \;\le\; C\,(\Delta t)^{\gamma},
+\]
+where $\hat X_T$ is the scheme's approximation and $X_T$ is the true
+solution, evaluated pathwise on the same Brownian driving noise.
+\end{definition}
+
+\begin{theorem}[Strong order of Euler--Maruyama]\label{thm:em-order}
+Under standard regularity conditions on $\drift$ and $\diff$
+(Lipschitz continuity and linear growth, as in
+\texttt{ito\_foundations.tex}, Assumption~1), the Euler--Maruyama
+scheme has strong order $\gamma = \tfrac12$.
+\end{theorem}
+
+\begin{proof}[Proof strategy]
+\Cref{prop:local-error} gives a per-step root-mean-square error of
+order $\Delta t$. Simulating to time $T$ takes $N=T/\Delta t$ such
+steps, and the natural (but wrong) guess is that independent
+per-step errors of size $\Delta t$ accumulate to a global error of
+size $N\cdot\Delta t = T$ --- a constant, not something that shrinks.
+That guess is wrong because it ignores that each step's error is fed
+back through $\drift$ and $\diff$ at the start of the \emph{next}
+step: an error made at step $i$ perturbs $X_{t_i}$, which perturbs
+every subsequent coefficient evaluation. Controlling this requires a
+discrete Gr\"onwall-type argument: the Lipschitz bound on $\drift$
+and $\diff$ shows that an error present at step $i$ can grow by at
+most a bounded multiplicative factor per subsequent step, so the
+$N$ accumulated local errors combine as a sum dominated by the
+largest few terms rather than by their count. Carrying this through
+converts the local root-mean-square bound $O(\Delta t)$ into a global
+strong error of $O\big(\sqrt{N}\cdot\Delta t\big) = O\big(\sqrt{T/\Delta
+t}\cdot\Delta t\big) = O(\sqrt{\Delta t})$, i.e.\ strong order
+$\tfrac12$. The technical machinery (the precise Gr\"onwall estimate
+and the regularity conditions under which it holds) is in
+\citeasnoun{kloeden1992}, Ch.~9--10; we cite the result rather than
+reproduce the estimate.
+\end{proof}
+
+\begin{remark}[Correspondence with the code]
+This is precisely what \texttt{test\_stochastic.cpp}'s convergence
+block checks empirically: running \texttt{simulate\_terminal} on
+\texttt{GBM} at increasing step counts $N \in \{10,50,200,1000\}$
+and observing the empirical terminal moments approach the exact
+moments from \texttt{GBM::sample\_terminal} as $\Delta t = T/N \to 0$.
+\Cref{thm:em-order} is the theoretical statement of which the test's
+shrinking printed errors are a numerical demonstration.
+\end{remark}
+
+\begin{remark}[Contrast with the exact sampler]
+For GBM specifically, \texttt{GBM::sample\_terminal} has \emph{zero}
+discretisation error, because the SDE admits a closed-form solution
+via It\^o's lemma (see \texttt{gbm.tex}). Euler--Maruyama is an
+approximation of the \emph{same} SDE and is only needed in general
+because most processes --- and, in particular, any path-dependent
+payoff even for GBM --- do not admit such a closed form.
+\end{remark}
+
+%--------------------------------------------------------------
+\section*{Milstein scheme --- reserved}
+%--------------------------------------------------------------
+\TODO{add the Milstein derivation, strong order 1.0 result, and its
+correspondence remark once \texttt{Milstein.hpp/.cpp} are written and
+tested. Note the diffusion-derivative term $b\,b'\,(Z^2-1)/2$ vanishes
+exactly when $b$ is constant (ABM, OU), giving a clean regression
+check that Milstein degenerates to Euler on those processes.}
+
+%--------------------------------------------------------------
+\bibliographystyle{agsm}
+\bibliography{refs}
+
+\end{document}

@@ -7,6 +7,10 @@
 #   make            build every .tex file present
 #   make clean      remove LaTeX build artifacts
 #   make distclean  also remove the built PDFs
+#
+# Any undefined \cite or \cref (a literal "?" or "??" in the output)
+# now FAILS the build loudly instead of silently shipping a broken
+# PDF -- see the check step below.
 
 TEXFILES := $(wildcard *.tex)
 PDFS     := $(TEXFILES:.tex=.pdf)
@@ -16,16 +20,26 @@ PDFS     := $(TEXFILES:.tex=.pdf)
 all: $(PDFS)
 
 # Full loop: pdflatex -> bibtex -> pdflatex x2, so citations (\cite) and
-# cross-references (\cref) both resolve.
+# cross-references (\cref) both resolve. bibtex's own output is no
+# longer discarded, and its exit status is no longer swallowed by
+# "|| true" -- a missing .bib entry now shows up immediately instead
+# of silently producing a "?" in the PDF.
 %.pdf: %.tex refs.bib
 	pdflatex -interaction=nonstopmode $< > /dev/null
-	bibtex $(basename $<) > /dev/null || true
+	bibtex $(basename $<)
 	pdflatex -interaction=nonstopmode $< > /dev/null
-	pdflatex -interaction=nonstopmode $<
+	pdflatex -interaction=nonstopmode $< > $*.buildlog
+	@if grep -qiE "(citation|reference).*undefined|undefined.*(citation|reference)" $*.buildlog; then \
+		echo ""; \
+		echo "!! $@: unresolved citation(s) or reference(s) -- see $*.buildlog"; \
+		grep -iE "(citation|reference).*undefined|undefined.*(citation|reference)" $*.buildlog; \
+		exit 1; \
+	fi
+	@rm -f $*.buildlog
 
 clean:
 	rm -f *.aux *.log *.out *.toc *.bbl *.blg *.fls *.fdb_latexmk \
-	      *.synctex.gz *.run.xml *.zref *.nav *.snm
+	      *.synctex.gz *.run.xml *.zref *.nav *.snm *.buildlog
 
 distclean: clean
 	rm -f $(PDFS)

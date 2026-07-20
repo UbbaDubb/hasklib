@@ -1,0 +1,173 @@
+%==============================================================
+%  abm.tex
+%  hasklib — mathematical companion / derivations
+%
+%  Arithmetic Brownian Motion (Bachelier's model): exact solution
+%  by direct integration -- no Ito's lemma or integrating factor
+%  needed, since the coefficients are already constant.
+%
+%  Sibling of gbm.tex and ou.tex, not a dependent of either.
+%==============================================================
+\documentclass[11pt]{article}
+
+%---------------- packages ----------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{bm}
+\usepackage{harvard}   % Harvard author-date referencing (with agsm.bst)
+
+%---------------- notation macros ----------------
+% (kept identical to ito_foundations.tex / gbm.tex / ou.tex)
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Qmeas}{\mathbb{Q}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\filt}{\mathcal{F}}
+\newcommand{\Om}{\Omega}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\dW}{\dd W_t}
+\newcommand{\dt}{\dd t}
+\newcommand{\R}{\mathbb{R}}
+
+\newcommand{\drift}{a}
+\newcommand{\diff}{b}
+
+%---------------- theorem environments ----------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}{Proposition}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+%==============================================================
+\title{Arithmetic Brownian Motion: Exact Solution\\
+       \large \texttt{hasklib} mathematical companion}
+\author{Hubert}
+\date{\today}
+%==============================================================
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note derives the exact terminal law of arithmetic Brownian
+motion (ABM), the process underlying \citeasnoun{shreve2004}'s
+classical treatment and, historically, Bachelier's original 1900
+model of a stock price. Unlike GBM and OU, neither It\^o's lemma nor
+an integrating factor is needed: both coefficients are already
+constant, so the SDE integrates directly.
+\end{abstract}
+
+%--------------------------------------------------------------
+\section{The ABM SDE}
+%--------------------------------------------------------------
+
+\begin{definition}[Arithmetic Brownian motion]\label{def:abm}
+$X_t$ follows arithmetic Brownian motion with drift $\mu\in\R$ and
+volatility $\sigma>0$ if it solves
+\begin{equation}\label{eq:abmsde}
+   \dd X_t = \mu\,\dt + \sigma\,\dW, \qquad X_0\in\R.
+\end{equation}
+In the notation of \texttt{ito\_foundations.tex} this is
+$\drift(t,x)=\mu$, $\diff(t,x)=\sigma$ --- both constant, with no
+$x$-dependence at all.
+\end{definition}
+
+\begin{remark}[Correspondence with the code]
+\texttt{ABM::drift} returns the constant $\mu$ and
+\texttt{ABM::diffusion} returns the constant $\sigma$, independent of
+$x$ in both cases. Since neither coefficient depends on $x$, the
+Lipschitz and linear-growth conditions of the existence--uniqueness
+assumption in \texttt{ito\_foundations.tex} hold trivially --- this is
+the simplest possible case of that assumption.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Exact solution}
+%--------------------------------------------------------------
+
+Both GBM and OU needed a substitution to remove an $X_t$-dependence
+from the coefficients before the SDE could be integrated: $\ln x$ for
+GBM, the integrating factor $e^{\kappa t}$ for OU. Here there is
+nothing to remove --- $\mu$ and $\sigma$ are already constants --- so
+the general relation from \texttt{ito\_foundations.tex},
+\[
+   X_t = X_0 + \int_0^t \drift(s,X_s)\,\dd s + \int_0^t \diff(s,X_s)\,\dd W_s,
+\]
+integrates immediately once $\drift=\mu$ and $\diff=\sigma$ are
+substituted.
+
+\begin{theorem}[Exact terminal law of ABM]\label{thm:abm-exact}
+Let $X_t$ solve \eqref{eq:abmsde}. Then for any $T>0$,
+\begin{equation}\label{eq:abmexact}
+   X_T = X_0 + \mu T + \sigma W_T,
+\end{equation}
+where $W_T\sim\mathcal N(0,T)$, so
+\begin{equation}\label{eq:abmlaw}
+   X_T \sim \mathcal N\big(X_0+\mu T,\ \sigma^2 T\big).
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Substituting $\drift(s,X_s)=\mu$ and $\diff(s,X_s)=\sigma$,
+\[
+   X_T = X_0 + \int_0^T \mu\,\dd s + \int_0^T \sigma\,\dd W_s
+       = X_0 + \mu T + \sigma\int_0^T \dd W_s .
+\]
+The remaining integral is $\int_0^T \dd W_s = W_T - W_0 = W_T$,
+giving \eqref{eq:abmexact}. Since $X_0+\mu T$ is a fixed number and
+$W_T\sim\mathcal N(0,T)$, the affine transformation
+$X_0+\mu T+\sigma W_T$ is itself Gaussian with mean $X_0+\mu T$ and
+variance $\sigma^2\Var(W_T)=\sigma^2 T$, giving \eqref{eq:abmlaw}.
+\end{proof}
+
+\begin{remark}
+Equation~\eqref{eq:abmlaw} is sampled with a single normal draw:
+generate $Z\sim\mathcal N(0,1)$ and set
+$X_T = X_0+\mu T+\sigma\sqrt T\,Z$. As with \texttt{GBM::sample\_terminal}
+and \texttt{OU::sample\_terminal}, no time-stepping is needed --- this
+is what \texttt{ABM::sample\_terminal} implements.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Moments and the relation to OU}
+%--------------------------------------------------------------
+
+\Cref{thm:abm-exact} already gives the moments directly, with no
+separate lemma needed:
+\[
+   \E[X_T] = X_0+\mu T, \qquad \Var(X_T) = \sigma^2 T.
+\]
+Unlike OU, the variance grows without bound as $T\to\infty$: there is
+no mean-reverting pull holding the process in, so uncertainty simply
+accumulates. Correspondingly, $\E[X_T]$ grows in a straight line
+rather than curving toward a long-run level --- there is no $\theta$
+here for it to curve toward.
+
+\begin{remark}[ABM as a degenerate OU process]
+Setting $\kappa=0$ in the OU drift $\kappa(\theta-X_t)$ removes it
+entirely, leaving $\dd X_t=\sigma\,\dW$ --- driftless Brownian motion.
+ABM generalises this by adding back a constant drift $\mu$ that is
+\emph{not} tied to any mean-reversion mechanism. Equivalently: ABM is
+what OU degenerates into once mean-reversion is switched off, plus an
+unconstrained drift term OU's $\kappa=0$ case does not have on its
+own.
+\end{remark}
+
+%--------------------------------------------------------------
+\bibliographystyle{agsm}
+\bibliography{refs}
+
+\end{document}
