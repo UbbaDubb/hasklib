@@ -10,10 +10,10 @@ protected:
     std::normal_distribution<double> dist;
 
 public:
-    NormalRng() : engine(std::random_device{}()), dist(0.0, 1.0) {}
-    NormalRng(unsigned int seed) : engine(seed), dist(0.0, 1.0) {}
-    ~NormalRng() {}
+    NormalRng();
+    NormalRng(unsigned int seed);
+    ~NormalRng();
 
-    double draw() { return dist(engine); }
+    double draw();
 };
 #endif

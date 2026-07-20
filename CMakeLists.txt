@@ -17,10 +17,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Boost)
 
-# Header-only library target. Anything that links `hasklib` gets the include path.
-add_library(hasklib INTERFACE)
-target_include_directories(hasklib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(hasklib INTERFACE Boost::math)
+# Compiled library target. Sources are globbed since the project is still
+# growing quickly; CONFIGURE_DEPENDS re-runs the glob on each build so new
+# .cpp files are picked up without having to re-run cmake by hand.
+file(GLOB_RECURSE HASKLIB_SOURCES CONFIGURE_DEPENDS
+     ${CMAKE_CURRENT_SOURCE_DIR}/include/hasklib/*.cpp)
+
+add_library(hasklib STATIC ${HASKLIB_SOURCES})
+target_include_directories(hasklib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(hasklib PUBLIC Boost::math)
 
 enable_testing()
 add_subdirectory(tests)

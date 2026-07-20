@@ -2,7 +2,7 @@
 #ifndef ABM_H
 #define ABM_H
 #include "Process.hpp"
-#include "NormalRng.hpp"
+#include "hasklib/random/NormalRng.hpp"
 
 class ABM : public StochasticProcess 
 {
@@ -14,7 +14,7 @@ public:
     // Constructor/Destructor
     ABM();
     ABM(double mu, double sigma);
-    ~ABM() {}
+    ~ABM();
 
     // StochasticProcess interface
     // dX_t = mu*dt + sigma*dW_t  ->  a(t,x) = mu, b(t,x) = sigma

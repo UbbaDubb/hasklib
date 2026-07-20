@@ -6,6 +6,8 @@ ABM::ABM() : mu(0.0), sigma(0.0) {}
 
 ABM::ABM(double mu, double sigma) : mu(mu), sigma(sigma) {}
 
+ABM::~ABM() {}
+
 double ABM::drift(double t, double x) const
 {
     return mu;  // constant — no dependence on x

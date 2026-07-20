@@ -11,6 +11,8 @@ NormalRng::NormalRng(unsigned int seed)
 {
 }
 
+NormalRng::~NormalRng() {}
+
 double NormalRng::draw()
 {
     return dist(engine);

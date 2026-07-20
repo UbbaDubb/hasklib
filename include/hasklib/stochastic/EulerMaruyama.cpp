@@ -2,6 +2,10 @@
 #include "EulerMaruyama.hpp"
 #include <cmath>
 
+EulerMaruyama::EulerMaruyama() {}
+
+EulerMaruyama::~EulerMaruyama() {}
+
 double EulerMaruyama::step(const StochasticProcess& process, double t, double x,
                             double dt, double z) const
 {

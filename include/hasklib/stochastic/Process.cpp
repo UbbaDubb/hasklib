@@ -3,6 +3,8 @@
 
 StochasticProcess::StochasticProcess() {}
 
+StochasticProcess::~StochasticProcess() {}
+
 double StochasticProcess::diffusion_derivative(double t, double x) const
 {
     double h = 1e-5;

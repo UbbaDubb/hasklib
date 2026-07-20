@@ -2,9 +2,11 @@
 #include "GBM.hpp"
 #include <cmath>
 
-GBM::GBM() : mu(0.0), sigma(0.0) {}
+GBM::GBM() : mu(0.0), sigma(1.0) {}
 
 GBM::GBM(double mu, double sigma) : mu(mu), sigma(sigma) {}
+
+GBM::~GBM() {}
 
 double GBM::drift(double t, double x) const
 {
