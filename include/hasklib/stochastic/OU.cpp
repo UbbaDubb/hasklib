@@ -28,8 +28,8 @@ double OU::sample_terminal(double X0, double T, NormalRng& rng) const
 {
     double Z = rng.draw();
     double meanTerm = X0 * std::exp(-kappa * T) + theta * (1.0 - std::exp(-kappa * T));
-    double varTerm  = sigma * std::sqrt((1.0 - std::exp(-2.0 * kappa * T)) / (2.0 * kappa));
-    return meanTerm + varTerm * Z;
+    double stdTerm  = sigma * std::sqrt((1.0 - std::exp(-2.0 * kappa * T)) / (2.0 * kappa));
+    return meanTerm + stdTerm * Z;
 }
 
 void   OU::reversion_speed(double kappa_in) { kappa = kappa_in; }
