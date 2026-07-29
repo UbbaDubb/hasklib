@@ -3,8 +3,9 @@
 %  hasklib — mathematical companion / derivations
 %
 %  Numerical schemes for simulating an Ito SDE: Euler-Maruyama now;
-%  Milstein to be added once Milstein.hpp/.cpp exist (same file,
-%  code and math built together, matching library convention).
+%  Milstein: the Ito-Taylor refinement of Euler-Maruyama, derived
+%  below (same file, code and math built together, matching library
+%  convention).
 %
 %  Cites ito_foundations.tex for the SDE framework and the
 %  Gaussian-increment property of Brownian motion.
@@ -58,6 +59,7 @@
 
 %==============================================================
 \title{Numerical Schemes for SDE Simulation: Euler--Maruyama\\
+       and Milstein\\
        \large \texttt{hasklib} mathematical companion}
 \author{Hubert}
 \date{\today}
@@ -72,9 +74,10 @@ It\^o SDE, connects it directly to
 \texttt{EulerMaruyama::step}/\texttt{simulate\_terminal}, and states
 its strong-order convergence result. It builds on the SDE framework
 and Brownian motion properties established in
-\texttt{ito\_foundations.tex}. The Milstein scheme is deliberately
-omitted here and will be appended once \texttt{Milstein.hpp/.cpp}
-exist, keeping code and derivation paired throughout the library.
+\texttt{ito\_foundations.tex}. The Milstein scheme is then derived as
+a refinement: it captures a term Euler--Maruyama drops, using It\^o's
+lemma a second time, this time applied to the diffusion coefficient
+itself rather than to the process.
 \end{abstract}
 
 %--------------------------------------------------------------
@@ -314,13 +317,130 @@ payoff even for GBM --- do not admit such a closed form.
 \end{remark}
 
 %--------------------------------------------------------------
-\section*{Milstein scheme --- reserved}
+\section{The Milstein scheme}
 %--------------------------------------------------------------
-\TODO{add the Milstein derivation, strong order 1.0 result, and its
-correspondence remark once \texttt{Milstein.hpp/.cpp} are written and
-tested. Note the diffusion-derivative term $b\,b'\,(Z^2-1)/2$ vanishes
-exactly when $b$ is constant (ABM, OU), giving a clean regression
-check that Milstein degenerates to Euler on those processes.}
+
+Euler--Maruyama's error, from \Cref{prop:local-error}, is dominated
+entirely by the diffusion contribution $\varepsilon_{\diff}$ --- the
+drift contribution was already a full order smaller. Milstein's idea
+is to attack exactly that term: instead of freezing $\diff(s,X_s)$ at
+its start-of-interval value the way \eqref{eq:em-approx} does, expand
+it one order further using It\^o's lemma applied to $\diff$ itself,
+and keep the next term the expansion produces.
+
+\begin{lemma}[A stochastic integral It\^o's lemma evaluates exactly]\label{lem:wdw}
+For a step from $t$ to $t+\Delta t$, writing $\Delta W=W_{t+\Delta
+t}-W_t$,
+\[
+   \int_t^{t+\Delta t} (W_s-W_t)\,\dd W_s = \tfrac12\big[(\Delta W)^2-\Delta t\big].
+\]
+\end{lemma}
+
+\begin{proof}
+Let $\widetilde W_s = W_s-W_t$ for $s\ge t$; this is itself a standard
+Brownian motion started at $0$ at time $t$. Apply It\^o's lemma
+(Theorem~1 of \texttt{ito\_foundations.tex}) to $f(x)=\tfrac12 x^2$
+along $\widetilde W_s$ (drift $0$, diffusion $1$): $f_x=x$, $f_{xx}=1$,
+so
+\[
+   \dd\big(\tfrac12\widetilde W_s^2\big)
+     = \Big(0+\tfrac12\cdot1\Big)\dd s + \widetilde W_s\,\dd W_s
+     = \tfrac12\,\dd s + \widetilde W_s\,\dd W_s.
+\]
+Integrating from $t$ to $t+\Delta t$, using $\widetilde W_t=0$ and
+$\widetilde W_{t+\Delta t}=\Delta W$,
+\[
+   \tfrac12(\Delta W)^2 - 0 = \tfrac12\Delta t + \int_t^{t+\Delta t}(W_s-W_t)\,\dd W_s,
+\]
+which rearranges to the claimed identity.
+\end{proof}
+
+\begin{definition}[Milstein update]\label{def:milstein}
+Expand $\diff(s,X_s)$ around $(t,X_t)$ to first order in $x$ (dropping
+the $t$-derivative, which contributes only at higher order once
+multiplied against $\dd W_s$):
+\[
+   \diff(s,X_s) \approx \diff(t,X_t) + \diff_x(t,X_t)\,(X_s-X_t).
+\]
+Keeping only the leading (Brownian) part of $X_s-X_t\approx
+\diff(t,X_t)(W_s-W_t)$ and substituting into the diffusion integral of
+\eqref{eq:exact-increment},
+\[
+   \int_t^{t+\Delta t}\!\diff(s,X_s)\,\dd W_s
+     \approx \diff(t,X_t)\int_t^{t+\Delta t}\!\dd W_s
+       + \diff(t,X_t)\,\diff_x(t,X_t)\int_t^{t+\Delta t}\!(W_s-W_t)\,\dd W_s.
+\]
+The first integral is $\Delta W=\sqrt{\Delta t}\,Z$, as in Euler--
+Maruyama; the second is exactly \Cref{lem:wdw}. Substituting both and
+writing $\Delta W=\sqrt{\Delta t}\,Z$ throughout gives the
+\emph{Milstein update}:
+\begin{equation}\label{eq:milstein-update}
+   X_{t+\Delta t} \;\approx\; X_t + \drift(t,X_t)\,\Delta t
+     + \diff(t,X_t)\sqrt{\Delta t}\,Z
+     + \tfrac12\,\diff(t,X_t)\,\diff_x(t,X_t)\,\Delta t\,\big(Z^2-1\big).
+\end{equation}
+\end{definition}
+
+\begin{remark}[Correspondence with the code]
+Equation~\eqref{eq:milstein-update} is exactly \texttt{Milstein::step}:
+the same \texttt{a}, \texttt{b} evaluations as
+\texttt{EulerMaruyama::step}, plus one further call --- the
+diffusion's $x$-derivative, \texttt{process.diffusion\_derivative(t,x)}
+--- and the extra correction term
+\texttt{0.5 * b * b\_x * dt * (z*z - 1)} added to the Euler--Maruyama
+result. \texttt{Milstein::simulate\_terminal} chains this update the
+same way \texttt{EulerMaruyama::simulate\_terminal} does.
+\end{remark}
+
+\begin{theorem}[Strong order of Milstein]\label{thm:milstein-order}
+Under the same regularity conditions as \Cref{thm:em-order}, together
+with $\diff$ being twice continuously differentiable in $x$, the
+Milstein scheme has strong order $\gamma=1$.
+\end{theorem}
+
+\begin{proof}[Proof strategy]
+\Cref{lem:wdw} shows the correction term recovers exactly the
+contribution Euler--Maruyama's freezing of $\diff$ discarded --- the
+term responsible for $\varepsilon_{\diff}$'s $O(\Delta t)$ root-mean-
+square local error in \Cref{prop:local-error}. Capturing it removes
+the leading source of error, leaving a local error one order smaller;
+accumulating $N=T/\Delta t$ such steps by the same
+compounding argument as \Cref{thm:em-order} yields a global strong
+error of $O(\Delta t)$ rather than $O(\sqrt{\Delta t})$. The technical
+estimates are in \citeasnoun{kloeden1992}, Ch.~10; we cite the result
+rather than reproduce it.
+\end{proof}
+
+\begin{remark}[A free regression check: constant diffusion]\label{rem:milstein-degenerate}
+Whenever $\diff(t,x)$ does not depend on $x$ --- ABM's constant
+$\sigma$, or OU's constant $\sigma$ --- the derivative
+$\diff_x(t,x)=0$ identically, so the entire correction term in
+\eqref{eq:milstein-update} vanishes exactly, not just
+approximately. On those two processes, \texttt{Milstein::step} should
+therefore return \emph{bit-for-bit} the same value as
+\texttt{EulerMaruyama::step} given the same $t,x,\Delta t,z$ ---
+a direct, zero-tolerance regression test requiring no statistical
+comparison, only that \texttt{diffusion\_derivative} correctly returns
+$0$ for those two classes.
+\end{remark}
+
+\begin{remark}[Where the correction is not free: GBM and CIR]
+For GBM, $\diff(t,x)=\sigma x$ gives $\diff_x=\sigma$, a genuine
+nonzero correction $\tfrac12\sigma^2 X_t\,\Delta t\,(Z^2-1)$ --- though
+GBM already has an exact sampler (\texttt{gbm.tex}), so Milstein only
+matters there for path-dependent payoffs, not terminal sampling. For
+CIR, $\diff(t,x)=\sigma\sqrt{x}$ gives
+$\diff_x=\sigma/(2\sqrt{x})$, and the correction is both nonzero and,
+like Euler--Maruyama applied to CIR (\texttt{cir.tex}), vulnerable to
+the same well-definedness failure if a step pushes $X_t$ negative
+before the next $\sqrt{x}$ evaluation. Whether Milstein on CIR needs
+its own truncation fix analogous to full truncation is a real
+question this note does not resolve.
+\end{remark}
+
+%--------------------------------------------------------------
+%  Reserved for any future scheme beyond Euler-Maruyama and Milstein.
+%--------------------------------------------------------------
 
 %--------------------------------------------------------------
 \bibliographystyle{agsm}

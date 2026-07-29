@@ -14,7 +14,7 @@ public:
     // Constructor/Destructor
     CIR();
     CIR(double kappa, double theta, double sigma);
-    ~CIR() {}
+    ~CIR();
 
     // StochasticProcess interface
     // dX_t = kappa*(theta - x)*dt + sigma*sqrt(x)*dW_t
