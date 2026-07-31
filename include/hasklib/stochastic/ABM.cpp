@@ -2,12 +2,18 @@
 #include "ABM.hpp"
 #include <cmath>
 
+////// Constructors/Destructor //////////////////////
+
+// Default constructor
 ABM::ABM() : mu(0.0), sigma(0.0) {}
 
+// Constructor by input
 ABM::ABM(double mu, double sigma) : mu(mu), sigma(sigma) {}
 
+// Destructor
 ABM::~ABM() {}
 
+//// Overriden functions from StochasticProcess /////////////////
 double ABM::drift(double t, double x) const
 {
     return mu;  // constant — no dependence on x
@@ -23,12 +29,14 @@ double ABM::diffusion_derivative(double t, double x) const
     return 0.0;  // b(t,x) = sigma (constant) => b'(t,x) = 0
 }
 
+//// Sample terminal ///////////////////////////////
 double ABM::sample_terminal(double X0, double T, NormalRng& rng) const
 {
     double Z = rng.draw();
     return X0 + mu * T + sigma * std::sqrt(T) * Z;
 }
 
+//// Accessor/modifier methods //////////////////
 void ABM::drift_param(double mu_in) { mu = mu_in; }
 double ABM::drift_param() const { return mu; }
 void ABM::vol_param(double sigma_in) { sigma = sigma_in; }

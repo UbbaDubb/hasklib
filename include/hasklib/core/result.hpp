@@ -39,4 +39,4 @@ class Result {
   std::variant<T, E> data_;
 };
 
-}  // namespace hasklib::core
+}  
