@@ -109,7 +109,7 @@ complication in this file.
 \begin{remark}[A genuine gap in the existence--uniqueness story]
 The existence--uniqueness assumption in \texttt{ito\_foundations.tex}
 requires $\drift$ and $\diff$ to be Lipschitz. $\sqrt{x}$ is
-\emph{not} Lipschitz near $x=0$ (its slope $\to\infty$ there), so
+not Lipschitz near $x=0$ (its slope $\to\infty$ there), so
 that assumption does not literally cover \eqref{eq:cirsde} as stated.
 A strong solution nonetheless exists and is unique --- this requires a
 separate, more delicate existence--uniqueness theory for
@@ -131,12 +131,12 @@ integrating factor idea is tempting to reuse --- but it was the
 diffusion term, not the drift, that made OU's trick work cleanly:
 applying It\^o's lemma to $f(t,x)=e^{\kappa t}x$ needs $f_{xx}=0$ to
 kill the second-order term entirely, which held because $f$ was
-\emph{linear} in $x$. The moment we try to fold $\sigma\sqrt{x}$ into
+linear in $x$. The moment we try to fold $\sigma\sqrt{x}$ into
 any single substitution $f(t,x)$, the resulting $f_{xx}$ term no
 longer vanishes, and no elementary choice of $f$ linearises
 \eqref{eq:cirsde} the way $\ln x$ or $e^{\kappa t}x$ did for the
 earlier processes. This is not a failure of effort --- $\sqrt{x}$ is a
-genuinely different kind of nonlinearity (a \emph{square-root}, or
+genuinely different kind of nonlinearity (a square-root, or
 CEV-type, diffusion), and no algebraic trick of this kind exists for
 it in general.
 
@@ -161,7 +161,7 @@ elsewhere in this note; it is cited, not derived, here.
 Although no closed-form $X_t$ is derived, its first two moments are
 obtainable directly: take expectations of the SDE (or of It\^o's
 lemma applied to a power of $X_t$) and solve the resulting
-\emph{deterministic} ODE. This sidesteps needing a path solution at
+deterministic ODE. This sidesteps needing a path solution at
 all.
 
 \begin{proposition}[Mean of CIR]\label{prop:cir-mean}
@@ -252,7 +252,7 @@ of directly to the SDE.)}
 \begin{remark}[What this moment computation buys, and what it does not]
 \Cref{prop:cir-mean,prop:cir-var} give exact first and second moments
 with no approximation --- useful for moment-matching tests analogous
-to \texttt{test\_stochastic.cpp}'s GBM check. They do \emph{not} give
+to \texttt{test\_stochastic.cpp}'s GBM check. They do not give
 the full distribution of $X_t$: CIR is not Gaussian (unlike OU or
 ABM), since $\sqrt{X_t}$ scales the noise unevenly across the state
 space. Recovering the full law requires the noncentral chi-squared
@@ -316,7 +316,7 @@ never reaches zero, a naive Euler--Maruyama discretisation
 \]
 has no mechanism preventing $\hat X_{t+\Delta t}<0$ for an unlucky
 draw of $Z$ --- and once that happens, $\sqrt{\hat X_{t+\Delta t}}$ at
-the \emph{next} step is not a real number at all. This is a
+the next step is not a real number at all. This is a
 discretisation artefact: it can occur even when the Feller condition
 guarantees the true continuous-time process stays positive, simply
 because a discrete-time approximation is not required to inherit that
@@ -324,7 +324,7 @@ guarantee.
 
 \begin{definition}[Full truncation scheme]\label{def:fulltrunc}
 Write $x^+=\max(x,0)$. The full truncation Euler scheme
-\citeasnoun{lord2010} replaces \emph{every} appearance of $\hat X_t$
+\citeasnoun{lord2010} replaces every appearance of $\hat X_t$
 inside the drift and diffusion evaluations --- but not the running
 value being updated itself --- by its positive part:
 \[
@@ -333,17 +333,17 @@ value being updated itself --- by its positive part:
 \]
 \end{definition}
 
-\begin{remark}[Why \emph{both} terms are truncated, not just the diffusion]
-An earlier, more obvious fix (\emph{partial truncation}) replaces
+\begin{remark}[Why both terms are truncated, not just the diffusion]
+An earlier, more obvious fix (partial truncation) replaces
 $\hat X_t$ by $\hat X_t^+$ only inside the square root, leaving the
 drift's mean-reversion term $\kappa(\theta-\hat X_t)$ using the raw
 (possibly negative) value. \citeasnoun{lord2010} found this still
 carries a systematic bias, and their contribution was to show that
-truncating the drift's evaluation \emph{as well} --- \Cref{def:fulltrunc}
+truncating the drift's evaluation as well --- \Cref{def:fulltrunc}
 --- reduces that bias further, at no extra implementation cost. The
 running value $\hat X_t$ itself is still allowed to go negative and
 stay negative for a stretch (it is only clipped where it is
-\emph{used}, inside the coefficient evaluations); this is a
+used, inside the coefficient evaluations); this is a
 deliberate feature of the scheme, not an oversight, and is what
 distinguishes ``full'' from ``partial'' truncation.
 \end{remark}

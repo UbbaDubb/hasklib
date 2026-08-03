@@ -124,7 +124,7 @@ $\xi\in[t,t+\Delta t]$ (depending on the whole path) with
 This is an exact statement but a useless one, since $\xi$ and $X_\xi$
 are unknown until the interval has already been simulated. Euler--
 Maruyama's approximation is to replace the unknown midpoint value
-$\drift(\xi,X_\xi)$ with the \emph{known} left-endpoint value
+$\drift(\xi,X_\xi)$ with the known left-endpoint value
 $\drift(t,X_t)$ --- valid to leading order because $\drift$ is
 continuous and the interval is short, so $\drift(\xi,X_\xi)$ differs
 from $\drift(t,X_t)$ by an amount that shrinks as $\Delta t\to0$
@@ -132,11 +132,11 @@ from $\drift(t,X_t)$ by an amount that shrinks as $\Delta t\to0$
 approximation in \eqref{eq:em-approx} is the same idea applied to the
 stochastic integral: if $\diff(s,X_s)$ were genuinely constant over
 $[t,t+\Delta t]$, the stochastic integral would equal
-$\diff(t,X_t)(W_{t+\Delta t}-W_t)$ \emph{exactly}, so freezing it at
+$\diff(t,X_t)(W_{t+\Delta t}-W_t)$ exactly, so freezing it at
 the left endpoint is again a leading-order replacement of an unknown
 quantity by a known one.
 
-The choice of \emph{which} endpoint to freeze at is what separates
+The choice of which endpoint to freeze at is what separates
 explicit from implicit schemes. Freezing at $t$ means every quantity
 on the right of \eqref{eq:em-approx} is already known once we reach
 time $t$, so $X_{t+\Delta t}$ is computed by a single formula with no
@@ -280,7 +280,7 @@ steps, and the natural (but wrong) guess is that independent
 per-step errors of size $\Delta t$ accumulate to a global error of
 size $N\cdot\Delta t = T$ --- a constant, not something that shrinks.
 That guess is wrong because it ignores that each step's error is fed
-back through $\drift$ and $\diff$ at the start of the \emph{next}
+back through $\drift$ and $\diff$ at the start of the next
 step: an error made at step $i$ perturbs $X_{t_i}$, which perturbs
 every subsequent coefficient evaluation. Controlling this requires a
 discrete Gr\"onwall-type argument: the Lipschitz bound on $\drift$
@@ -308,10 +308,10 @@ shrinking printed errors are a numerical demonstration.
 \end{remark}
 
 \begin{remark}[Contrast with the exact sampler]
-For GBM specifically, \texttt{GBM::sample\_terminal} has \emph{zero}
+For GBM specifically, \texttt{GBM::sample\_terminal} has zero
 discretisation error, because the SDE admits a closed-form solution
 via It\^o's lemma (see \texttt{gbm.tex}). Euler--Maruyama is an
-approximation of the \emph{same} SDE and is only needed in general
+approximation of the same SDE and is only needed in general
 because most processes --- and, in particular, any path-dependent
 payoff even for GBM --- do not admit such a closed form.
 \end{remark}
@@ -417,7 +417,7 @@ $\sigma$, or OU's constant $\sigma$ --- the derivative
 $\diff_x(t,x)=0$ identically, so the entire correction term in
 \eqref{eq:milstein-update} vanishes exactly, not just
 approximately. On those two processes, \texttt{Milstein::step} should
-therefore return \emph{bit-for-bit} the same value as
+therefore return bit-for-bit the same value as
 \texttt{EulerMaruyama::step} given the same $t,x,\Delta t,z$ ---
 a direct, zero-tolerance regression test requiring no statistical
 comparison, only that \texttt{diffusion\_derivative} correctly returns

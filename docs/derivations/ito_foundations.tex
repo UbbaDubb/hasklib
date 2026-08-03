@@ -111,7 +111,9 @@ In code, property (3) is what \texttt{NormalRng::draw()} supplies:
 a step of length $\Delta t$ uses $W_{t+\Delta t}-W_t = \sqrt{\Delta t}\,Z$
 with $Z\sim\mathcal N(0,1)$. This substitution is the single bridge
 between the continuous theory here and the discrete simulation code.
+\\
 \end{remark}
+
 
 Although the paths are continuous, they are extremely rough. Fix $t$ and
 consider the difference quotient over a step $h>0$. By the Gaussian-increment
@@ -129,16 +131,15 @@ $t\mapsto W_t$ is nowhere differentiable.
 
 Equivalently, the path has infinite first-order (total) variation on every
 interval, so integrals $\int f\,\dd W_s$ cannot be defined pathwise as
-Riemann--Stieltjes integrals. Its \emph{quadratic} variation, however, is
-finite --- the content of \cref{sec:qv} --- and it is precisely this finite
-second-order variation that the It\^o integral and It\^o's lemma are built on.
+Riemann--Stieltjes integrals. Its quadratic variation, however, is
+finite, and it is precisely this finite second-order variation that the It\^o integral and It\^o's lemma are built on.
 
 %--------------------------------------------------------------
 \section{Quadratic variation}\label{sec:qv}
 %--------------------------------------------------------------
 
 The property that distinguishes stochastic from ordinary calculus is
-that Brownian motion accumulates \emph{quadratic} variation at a
+that Brownian motion accumulates quadratic variation at a
 nonzero rate.
 
 \begin{proposition}[Quadratic variation of Brownian motion]\label{prop:qv}
@@ -149,7 +150,7 @@ satisfies
         \;=\; T
    \qquad \text{in } L^2,
 \]
-where $\Pi$ is a partition of $[0,T]$. Heuristically this is written
+where $\Pi$ is a partition of $[0,T]$. Informally this is written
 \[
    (\dW)^2 = \dt.
 \]
@@ -166,12 +167,11 @@ Write the partition as $\Pi=\{0=t_0<t_1<\dots<t_n=T\}$ and abbreviate
 $\E\big[(S_\Pi-T)^2\big]\to0$ as the mesh $\|\Pi\|:=\max_k\Delta t_k\to0$.
 We use only two facts about the increments, both directly from the definition
 of Brownian motion --- each $\Delta W_k\sim\mathcal N(0,\Delta t_k)$, and
-increments over disjoint intervals are independent. Nothing measure-theoretic
-enters beyond these.
+increments over disjoint intervals are independent.
 
 \medskip
-\noindent\emph{Step 1 --- the mean is exactly $T$.}\;
-Since $\E[\Delta W_k]=0$, the second moment is the variance:
+\noindent\emph{Step 1:}\ The mean is exactly $T$.
+\\Since $\E[\Delta W_k]=0$, the second moment is the variance:
 \[
   \E\big[(\Delta W_k)^2\big]=\Var(\Delta W_k)=\Delta t_k .
 \]
@@ -180,15 +180,16 @@ Summing over $k$,
   \E[S_\Pi]=\sum_{k}\E\big[(\Delta W_k)^2\big]
            =\sum_k \Delta t_k = T ,
 \]
-which holds for \emph{every} partition, not merely in the limit. Because the
-mean is exactly $T$, the mean-square error \emph{is} the variance:
+which holds for every partition, not merely in the limit. Because the
+mean is exactly $T$, the mean-square error is the variance:
 \[
   \E\big[(S_\Pi-T)^2\big]=\Var(S_\Pi) .
 \]
 So the whole statement reduces to showing $\Var(S_\Pi)\to0$.
 
 \medskip
-\noindent\emph{Step 2 --- variance of a single term.}\;
+\noindent\emph{Step 2}\; Variance of a single term.
+\\
 Normalise the increment as $\Delta W_k=\sqrt{\Delta t_k}\,Z$ with
 $Z\sim\mathcal N(0,1)$, so $(\Delta W_k)^2=\Delta t_k\,Z^2$ and
 \[
@@ -204,7 +205,8 @@ $\E[Z^4]=3\,\E[Z^2]=3$.) Therefore
 \]
 
 \medskip
-\noindent\emph{Step 3 --- variance of the sum, then let the mesh shrink.}\;
+\noindent\emph{Step 3}\; Variance of the sum, then let the mesh shrink.
+\\
 The increments $\Delta W_k$ are independent, so the squared increments
 $(\Delta W_k)^2$ are independent too, and the variance of a sum of
 independent variables is the sum of the variances:
@@ -226,7 +228,7 @@ which is exactly the claimed $L^2$ convergence.
 
 \begin{remark}
 The mean computation ($\E[S_\Pi]=T$) is what makes $(\dW)^2=\dt$
-\emph{plausible}; the variance computation is what makes it \emph{usable}.
+plausible; the variance computation is what makes it usable.
 Per step the squared increment $(\Delta W_k)^2$ still fluctuates --- its
 standard deviation $\sqrt2\,\Delta t_k$ is the same order as its mean --- but
 those fluctuations are independent across steps, so summing averages them out
@@ -251,7 +253,7 @@ interpreted as the integral equation
               + \int_0^t \diff(s,X_s)\,\dd W_s,
 \]
 where the second integral is an It\^o integral. We call $\drift$ the
-\emph{drift} and $\diff$ the \emph{diffusion} coefficient.
+drift and $\diff$ the diffusion coefficient.
 \end{definition}
 
 \begin{remark}[Correspondence with the code]
@@ -277,13 +279,12 @@ it is the engine behind every closed-form solution used in
 \texttt{hasklib} (the GBM exact sampler, the OU solution).
 
 \begin{theorem}[It\^o's lemma, one dimension]\label{thm:ito}
-Let $X_t$ solve \eqref{eq:sde} and let $f(t,x)\in C^{1,2}$. Then
+Let $X_t$ solve \eqref{eq:sde} and let $\varphi(t,x)\in C^{1,2}$. Then
 \begin{equation}\label{eq:ito}
-   \dd f(t,X_t) =
-     \Big( f_t + \drift\, f_x + \tfrac12 \diff^2 f_{xx} \Big)\dt
-     \;+\; \diff\, f_x \,\dW,
+   \dd \varphi(t,X_t) =
+     \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \tfrac12 \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
+     \;+\; \diff\, \frac{\partial\varphi}{\partial x} \,\dW,
 \end{equation}
-where subscripts denote partial derivatives evaluated at $(t,X_t)$.
 \end{theorem}
 
 \begin{proof}[Heuristic derivation]
@@ -321,12 +322,12 @@ and vanish in the mesh limit for exactly the reason the fluctuations did in
 
 \medskip
 \noindent\emph{Taylor expansion.}\;
-Expand $f(t+\dt,\,X_t+\dd X)$ about $(t,X_t)$ to second order:
+Expand $\varphi(t+\dt,\,X_t+\dd X)$ about $(t,X_t)$ to second order:
 \[
-  \dd f = f_t\,\dt + f_x\,\dd X
-        + \tfrac12 f_{tt}\,(\dt)^2
-        + f_{tx}\,\dt\,\dd X
-        + \tfrac12 f_{xx}\,(\dd X)^2
+  \dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X
+        + \tfrac12 \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2
+        + \frac{\partial^2\varphi}{\partial t\partial x}\,\dt\,\dd X
+        + \tfrac12 \frac{\partial^2\varphi}{\partial x^2}\,(\dd X)^2
         + \cdots
 \]
 Substitute the SDE $\dd X = \drift\,\dt + \diff\,\dW$ and square:
@@ -341,19 +342,19 @@ $\diff^2(\dW)^2=\diff^2\,\dt$ survives:
 The two remaining second-order terms of the expansion vanish for the same
 reason:
 \[
-  \tfrac12 f_{tt}\,(\dt)^2 = 0, \qquad
-  f_{tx}\,\dt\,\dd X
-     = f_{tx}\big(\drift\,(\dt)^2 + \diff\,\dt\,\dW\big) = 0 .
+  \tfrac12 \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2 = 0, \qquad
+  \frac{\partial^2\varphi}{\partial t\partial x}\,\dt\,\dd X
+     = \frac{\partial^2\varphi}{\partial t\partial x}\big(\drift\,(\dt)^2 + \diff\,\dt\,\dW\big) = 0 .
 \]
 What remains is
 \[
-  \dd f = f_t\,\dt + f_x\,\dd X + \tfrac12 f_{xx}\,\diff^2\,\dt .
+  \dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X + \tfrac12 \frac{\partial^2\varphi}{\partial x^2}\,\diff^2\,\dt .
 \]
 Substitute $\dd X = \drift\,\dt + \diff\,\dW$ once more and collect the $\dt$
 and $\dW$ parts:
 \[
-  \dd f = \Big( f_t + \drift\, f_x + \tfrac12 \diff^2 f_{xx} \Big)\dt
-        + \diff\, f_x \,\dW ,
+  \dd \varphi = \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \tfrac12 \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
+        + \diff\, \frac{\partial\varphi}{\partial x} \,\dW ,
 \]
 which is \eqref{eq:ito}.
 \end{proof}
@@ -361,8 +362,8 @@ which is \eqref{eq:ito}.
 \begin{remark}
 Had $X$ been a smooth (finite-variation) path, $(\dd X)^2$ would have been
 genuinely $O((\dt)^2)$ and dropped out, leaving the ordinary chain rule
-$\dd f = f_t\,\dt + f_x\,\dd X$. The whole gap between stochastic and ordinary
-calculus is the single surviving term $\tfrac12\diff^2 f_{xx}\,\dt$, and it
+$\dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X$. The whole gap between stochastic and ordinary
+calculus is the single surviving term $\tfrac12\diff^2 \frac{\partial^2\varphi}{\partial x^2}\,\dt$, and it
 survives only because $(\dW)^2=\dt$ rather than $0$ --- i.e.\ because Brownian
 motion has nonzero quadratic variation. Every closed-form result in
 \texttt{hasklib} that ``corrects a drift by half a variance'' (the
@@ -374,8 +375,7 @@ is exactly this one term.
 The single downstream consequence to keep in view: applying
 \cref{thm:ito} with $f(t,x)=\ln x$ to geometric Brownian motion
 linearises the SDE and yields the exact terminal law sampled by
-\texttt{GBM::sample\_terminal}. That derivation is carried out in
-\texttt{gbm.tex}.
+\texttt{GBM::sample\_terminal}.
 \end{remark}
 
 %--------------------------------------------------------------
