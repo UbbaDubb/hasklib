@@ -1,0 +1,292 @@
+%==============================================================
+%  book.tex
+%  hasklib — mathematical companion / derivations, combined edition
+%
+%  Single-document version of ito_foundations.tex, gbm.tex, ou.tex,
+%  abm.tex, cir.tex, schemes.tex, as chapters in reading order:
+%  foundations -> GBM -> OU -> ABM -> CIR -> numerical schemes.
+%
+%  Skeleton only: chapter shells + shared preamble are wired up;
+%  content to be filled in per chapter.
+%==============================================================
+\documentclass[11pt]{report}
+
+%---------------- packages ----------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{bm}
+\usepackage{harvard}   % Harvard author-date referencing (with agsm.bst)
+
+%---------------- notation macros ----------------
+% (identical to the notation blocks in ito_foundations.tex / gbm.tex / ou.tex / abm.tex / cir.tex / schemes.tex)
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Qmeas}{\mathbb{Q}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\filt}{\mathcal{F}}
+\newcommand{\Om}{\Omega}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\dW}{\dd W_t}
+\newcommand{\dt}{\dd t}
+\newcommand{\R}{\mathbb{R}}
+
+\newcommand{\drift}{a}
+\newcommand{\diff}{b}
+
+%---------------- theorem environments ----------------
+% Union of every environment used across the six source files,
+% numbered within chapter (Theorem 2.1, Definition 3.2, ...).
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}{Lemma}[chapter]
+\newtheorem{proposition}{Proposition}[chapter]
+\newtheorem{corollary}{Corollary}[chapter]
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[chapter]
+\newtheorem{assumption}{Assumption}[chapter]
+
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}[chapter]
+
+\numberwithin{equation}{chapter}
+
+\newcommand{\TODO}[1]{\medskip\noindent\textbf{[\textcolor{red}{TO DERIVE}: #1]}\medskip}
+
+%==============================================================
+\title{hasklib: Stochastic Process Derivations}
+\author{Hubert Kasinski}
+\date{\today}
+%==============================================================
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document collects the stochastic-calculus results that the
+stochastic layer of \texttt{hasklib} relies on: from the
+probability-space setup, Brownian motion, It\^o SDE, to Geometric Brownian Motion
+, Ornstein--Uhlenbeck, Arithmetic Brownian Motion, Cox--Ingersoll--Ross, and numerical schemes.
+Standard measure-theoretic probability is assumed; see
+\citeasnoun{shreve2004} or \citeasnoun{williams1991} for construction.
+\end{abstract}
+
+\tableofcontents
+
+
+
+%--------------------------------------------------------------
+\chapter{Foundations: It\^o Calculus and the SDE Framework}
+%--------------------------------------------------------------
+% Source: ito_foundations.tex
+\section{Probability space and Brownian motion}
+
+We work on a filtered probability space
+$(\Om, \filt, \{\filt_t\}_{t\ge 0}, \Prob)$ satisfying the usual
+conditions. The filtration $\{\filt_t\}$ represents the information
+available up to time $t$.
+
+\begin{definition}[Brownian motion]
+\leavevmode\\A standard Brownian motion $\{W_t\}_{t\ge 0}$ is a process with
+\begin{enumerate}
+  \item $W_0 = 0$ almost surely;
+  \item Independent increments: for $s < t < u $, $W_u - W_t$ is
+        independent of $W_t - W_s$;
+  \item Gaussian increments: $W_t - W_s \sim \mathcal{N}(0,\, t-s)$;
+  \item Continuous sample paths.
+\end{enumerate}
+\end{definition}
+
+\begin{remark}
+       \leavevmode\\
+In code, property (3) is what \texttt{NormalRng::draw()} supplies:
+a step of length $\Delta t$ uses $W_{t+\Delta t}-W_t = \sqrt{\Delta t}\,Z$
+with $Z\sim\mathcal N(0,1)$. This substitution is the single bridge
+between the continuous theory here and the discrete simulation code.
+
+\end{remark}
+\leavevmode\\
+One might notice (2) and (4) pull in
+different directions. Independent increments mean each step of the
+path is a fresh draw, carrying no memory of the past --- nothing
+about $\filt_t$ constrains $W_{t+h}-W_t$. Continuity, on the other
+hand, means the path never jumps: $W_{t+h}$ must stay close to $W_t$
+as $h\to 0$. It is not obvious a single process can do both at once,
+and the price of doing so turns out to be that the path is extremely
+rough and nowhere differentiable.
+\leavevmode\\
+\leavevmode\\
+Fixing $t$ and considering the difference quotient over a step $h>0$. By
+the Gaussian-increment property, $W_{t+h}-W_t \sim \mathcal N(0,h)$,
+so the difference quotient
+\[
+   \frac{W_{t+h}-W_t}{h}
+\]
+is itself Gaussian with mean $0$ and variance
+\[
+   \Var\!\left(\frac{W_{t+h}-W_t}{h}\right)
+   = \frac{1}{h^2}\Var(W_{t+h}-W_t)
+   = \frac{h}{h^2} = \frac{1}{h},
+\]
+using that dividing a random variable by a constant $h$ scales its
+variance by $1/h^2$. Hence the standard deviation of the difference
+quotient is $1/\sqrt h$, which diverges as $h\downarrow 0$: the path
+moves by order $\sqrt h$ over a step of order $h$, so no finite slope
+survives the limit. This informal argument is made rigorous by the
+Paley--Wiener--Zygmund theorem \cite{pwz1933}: with probability one,
+$t\mapsto W_t$ is nowhere differentiable. It also follows that the
+path has infinite first-order (total) variation on every interval, so
+integrals $\int f\,\dd W_s$ cannot be defined pathwise as
+Riemann--Stieltjes integrals. Its quadratic variation, however, is
+finite, and it is precisely this finite second-order variation that
+the It\^o integral and It\^o's lemma are built on.
+
+%--------------------------------------------------------------
+\section{Quadratic variation}\label{sec:qv}
+%--------------------------------------------------------------
+
+The property that distinguishes stochastic from ordinary calculus is
+that Brownian motion accumulates quadratic variation at a
+nonzero rate.
+
+\begin{proposition}[Quadratic variation of Brownian motion]\label{prop:qv}
+\leavevmode\\
+       For a standard Brownian motion, the quadratic variation over $[0,T]$
+satisfies
+\[
+   \langle W\rangle_T \;=\; \lim_{\|\Pi\|\to 0}\sum_{k} \big(W_{t_{k+1}}-W_{t_k}\big)^2
+        \;=\; T
+   \qquad \text{in } L^2,
+\]
+where $\Pi$ is a partition of $[0,T]$. Informally this is written
+\[
+   (\dW)^2 = \dt.
+\]
+\end{proposition}
+
+\begin{proof}
+       \leavevmode\\
+Write the partition as $\Pi=\{0=t_0<t_1<\dots<t_n=T\}$ and abbreviate
+\[
+  \Delta t_k = t_{k+1}-t_k, \qquad
+  \Delta W_k = W_{t_{k+1}}-W_{t_k}, \qquad
+  S_\Pi = \sum_{k=0}^{n-1}\big(\Delta W_k\big)^2 .
+\]
+``Convergence in $L^2$'' means the mean-square error vanishes:
+$\E\big[(S_\Pi-T)^2\big]\to0$ as the mesh $\|\Pi\|:=\max_k\Delta t_k\to0$.
+We use only two facts about the increments, both directly from the definition
+of Brownian motion --- each $\Delta W_k\sim\mathcal N(0,\Delta t_k)$, and
+increments over disjoint intervals are independent.
+
+\medskip
+\noindent\emph{Step 1:}\ The mean is exactly $T$.
+\\Since $\E[\Delta W_k]=0$, the second moment is the variance:
+\[
+  \E\big[(\Delta W_k)^2\big]=\Var(\Delta W_k)=\Delta t_k .
+\]
+Summing over $k$,
+\[
+  \E[S_\Pi]=\sum_{k}\E\big[(\Delta W_k)^2\big]
+           =\sum_k \Delta t_k = T ,
+\]
+which holds for every partition, not merely in the limit. Because the
+mean is exactly $T$, the mean-square error is the variance:
+\[
+  \E\big[(S_\Pi-T)^2\big]=\Var(S_\Pi) .
+\]
+So the whole statement reduces to showing $\Var(S_\Pi)\to0$.
+
+\medskip
+\noindent\emph{Step 2}\; Variance of a single term.
+\\
+Normalise the increment as $\Delta W_k=\sqrt{\Delta t_k}\,Z$ with
+$Z\sim\mathcal N(0,1)$, so $(\Delta W_k)^2=\Delta t_k\,Z^2$ and
+\[
+  \Var\big((\Delta W_k)^2\big)=(\Delta t_k)^2\,\Var(Z^2).
+\]
+For a standard normal, $\E[Z^2]=1$ and $\E[Z^4]=3$, hence
+$\Var(Z^2)=\E[Z^4]-\big(\E[Z^2]\big)^2=3-1=2$. (The fourth moment is one
+Gaussian integration by parts: with the density $\phi$ satisfying
+$\phi'(z)=-z\,\phi(z)$, integrating $\int z^4\phi\,\dd z$ by parts gives
+$\E[Z^4]=3\,\E[Z^2]=3$.) Therefore
+\[
+  \Var\big((\Delta W_k)^2\big)=2\,(\Delta t_k)^2 .
+\]
+
+\medskip
+\noindent\emph{Step 3}\; Variance of the sum, then let the mesh shrink.
+\\
+The increments $\Delta W_k$ are independent, so the squared increments
+$(\Delta W_k)^2$ are independent too, and the variance of a sum of
+independent variables is the sum of the variances:
+\[
+  \Var(S_\Pi)=\sum_k \Var\big((\Delta W_k)^2\big)=2\sum_k (\Delta t_k)^2 .
+\]
+Bound one factor of $\Delta t_k$ in each term by the mesh:
+\[
+  \sum_k (\Delta t_k)^2 \le \Big(\max_k \Delta t_k\Big)\sum_k \Delta t_k
+                        = \|\Pi\|\,T .
+\]
+Combining,
+\[
+  \E\big[(S_\Pi-T)^2\big]=\Var(S_\Pi)\le 2\,\|\Pi\|\,T
+  \;\xrightarrow[\;\|\Pi\|\to0\;]{}\;0 ,
+\]
+which is exactly the claimed $L^2$ convergence.
+\end{proof}
+
+\begin{remark}
+The mean computation ($\E[S_\Pi]=T$) is what makes $(\dW)^2=\dt$
+plausible; the variance computation is what makes it usable.
+Per step the squared increment $(\Delta W_k)^2$ still fluctuates --- its
+standard deviation $\sqrt2\,\Delta t_k$ is the same order as its mean --- but
+those fluctuations are independent across steps, so summing averages them out
+at rate $\|\Pi\|$. Inside a sum (equivalently, an integral) the random
+$(\Delta W_k)^2$ may therefore be replaced by the deterministic $\Delta t_k$.
+That replacement is the entire content of the shorthand $(\dW)^2=\dt$ used in
+the next section.
+\end{remark}
+
+
+%--------------------------------------------------------------
+\chapter{Geometric Brownian Motion}
+%--------------------------------------------------------------
+% Source: gbm.tex
+
+%--------------------------------------------------------------
+\chapter{The Ornstein--Uhlenbeck Process}
+%--------------------------------------------------------------
+% Source: ou.tex
+
+%--------------------------------------------------------------
+\chapter{Arithmetic Brownian Motion}
+%--------------------------------------------------------------
+% Source: abm.tex
+
+%--------------------------------------------------------------
+\chapter{The Cox--Ingersoll--Ross Process}
+%--------------------------------------------------------------
+% Source: cir.tex
+
+%--------------------------------------------------------------
+\chapter{Numerical Schemes: Euler--Maruyama and Milstein}
+%--------------------------------------------------------------
+% Source: schemes.tex
+
+%--------------------------------------------------------------
+% References cited across the source files, all already present
+% in refs.bib: shreve2004, oksendal2003, kloeden1992, williams1991,
+% pwz1933, brigomercurio2006, cir1985, lord2010.
+%--------------------------------------------------------------
+\bibliographystyle{agsm}
+\bibliography{refs}
+
+\end{document}
