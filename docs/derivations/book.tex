@@ -306,10 +306,11 @@ it is the engine behind every closed-form solution used in
 \texttt{hasklib} (the GBM exact sampler, the OU solution).
 
 \begin{theorem}[It\^o's lemma, one dimension]\label{thm:ito}
+\leavevmode\\
 Let $X_t$ solve \eqref{eq:sde} and let $\varphi(t,x)\in C^{1,2}$. Then
 \begin{equation}\label{eq:ito}
    \dd \varphi(t,X_t) =
-     \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \tfrac12 \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
+     \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \frac{1}{2} \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
      \;+\; \diff\, \frac{\partial\varphi}{\partial x} \,\dW,
 \end{equation}
 \end{theorem}
@@ -323,12 +324,13 @@ strict sense, as a rigorous version requires the construction of the It\^o
 integral \cite[Sec.~4.2.1]{shreve2004}, which is outside the scope of this document.
 The derivation stems around the idea that, because $\dd X$ carries a Brownian term of size
 $\sqrt{\dt}$, a contribution that ordinary calculus discards as ``second
-order'' is in fact first order and must be kept.
+order'' is in fact first order and should be kept.
 
 \medskip
-\noindent\emph{Orders of magnitude.}\;
+\noindent
 Over a step of length $\dt$ the increment $\dW$ has typical size $\sqrt{\dt}$
-(it is $\mathcal N(0,\dt)$). Ranking the elementary products by their power of
+(it is $\mathcal N(0,\dt)$).
+\\Ranking the elementary products by their power of
 $\dt$:
 \[
   \dt = O(\dt), \qquad
@@ -337,9 +339,9 @@ $\dt$:
   \dt\,\dW = O(\dt^{3/2}), \qquad
   (\dt)^2 = O(\dt^2).
 \]
-Discard everything of order smaller than $\dt$, and use \cref{prop:qv} to
-replace $(\dW)^2$ by its in-sum limit $\dt$. This gives the \emph{It\^o
-multiplication table}
+Discarding everything of order smaller than $\dt$, and using \cref{prop:qv} to
+replace $(\dW)^2$ by its in-sum limit $\dt$, gives the It\^o
+multiplication table
 \begin{equation}\label{eq:itotable}
   (\dW)^2=\dt, \qquad \dt\,\dW=0, \qquad (\dt)^2=0 .
 \end{equation}
@@ -348,13 +350,14 @@ and vanish in the mesh limit for exactly the reason the fluctuations did in
 \cref{sec:qv}.
 
 \medskip
-\noindent\emph{Taylor expansion.}\;
+\noindent Taylor expansion:
+\leavevmode\\
 Expand $\varphi(t+\dt,\,X_t+\dd X)$ about $(t,X_t)$ to second order:
 \[
   \dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X
-        + \tfrac12 \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2
+        + \frac{1}{2} \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2
         + \frac{\partial^2\varphi}{\partial t\partial x}\,\dt\,\dd X
-        + \tfrac12 \frac{\partial^2\varphi}{\partial x^2}\,(\dd X)^2
+        + \frac{1}{2} \frac{\partial^2\varphi}{\partial x^2}\,(\dd X)^2
         + \cdots
 \]
 Substitute the SDE $\dd X = \drift\,\dt + \diff\,\dW$ and square:
@@ -369,40 +372,33 @@ $\diff^2(\dW)^2=\diff^2\,\dt$ survives:
 The two remaining second-order terms of the expansion vanish for the same
 reason:
 \[
-  \tfrac12 \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2 = 0, \qquad
+  \frac{1}{2} \frac{\partial^2\varphi}{\partial t^2}\,(\dt)^2 = 0, \qquad
   \frac{\partial^2\varphi}{\partial t\partial x}\,\dt\,\dd X
      = \frac{\partial^2\varphi}{\partial t\partial x}\big(\drift\,(\dt)^2 + \diff\,\dt\,\dW\big) = 0 .
 \]
-What remains is
+Leaving:
 \[
-  \dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X + \tfrac12 \frac{\partial^2\varphi}{\partial x^2}\,\diff^2\,\dt .
+  \dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X + \frac{1}{2} \frac{\partial^2\varphi}{\partial x^2}\,\diff^2\,\dt .
 \]
 Substitute $\dd X = \drift\,\dt + \diff\,\dW$ once more and collect the $\dt$
 and $\dW$ parts:
 \[
-  \dd \varphi = \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \tfrac12 \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
+  \dd \varphi = \Big( \frac{\partial\varphi}{\partial t} + \drift\, \frac{\partial\varphi}{\partial x} + \frac{1}{2} \diff^2 \frac{\partial^2\varphi}{\partial x^2} \Big)\dt
         + \diff\, \frac{\partial\varphi}{\partial x} \,\dW ,
 \]
 which is \eqref{eq:ito}.
 \end{proof}
 
 \begin{remark}
+\leavevmode\\
 Had $X$ been a smooth (finite-variation) path, $(\dd X)^2$ would have been
 genuinely $O((\dt)^2)$ and dropped out, leaving the ordinary chain rule
 $\dd \varphi = \frac{\partial\varphi}{\partial t}\,\dt + \frac{\partial\varphi}{\partial x}\,\dd X$. The whole gap between stochastic and ordinary
-calculus is the single surviving term $\tfrac12\diff^2 \frac{\partial^2\varphi}{\partial x^2}\,\dt$, and it
+calculus is the single surviving term $\frac{1}{2}\diff^2 \frac{\partial^2\varphi}{\partial x^2}\,\dt$, and it
 survives only because $(\dW)^2=\dt$ rather than $0$ --- i.e.\ because Brownian
 motion has nonzero quadratic variation. Every closed-form result in
-\texttt{hasklib} that ``corrects a drift by half a variance'' (the
-$-\tfrac12\sigma^2$ in the GBM log-solution, the It\^o term in the OU solution)
+the code that ``corrects a drift by half a variance''
 is exactly this one term.
-\end{remark}
-
-\begin{remark}
-The single downstream consequence to keep in view: applying
-\cref{thm:ito} with $f(t,x)=\ln x$ to geometric Brownian motion
-linearises the SDE and yields the exact terminal law sampled by
-\texttt{GBM::sample\_terminal}.
 \end{remark}
 
 %--------------------------------------------------------------
