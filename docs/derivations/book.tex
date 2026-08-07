@@ -290,7 +290,7 @@ base class encodes: \texttt{drift(t,x)} returns $\drift(t,x)$ and
 process (GBM, OU, CIR) is a choice of these two functions.
 \end{remark}
 
-\begin{assumption}[Existence and uniqueness]
+\begin{assumption}[Existence and uniqueness]\label{ass:existence-uniqueness}
   \leavevmode\\
 We assume $\drift$ and $\diff$ satisfy the standard Lipschitz and
 linear-growth conditions guaranteeing a unique strong solution to
@@ -405,6 +405,204 @@ is exactly this one term.
 \chapter{Geometric Brownian Motion}
 %--------------------------------------------------------------
 % Source: gbm.tex
+
+%--------------------------------------------------------------
+\section{The GBM SDE}
+%--------------------------------------------------------------
+
+\begin{definition}[Geometric Brownian motion]\label{def:gbm}
+\leavevmode\\
+  $X_t$ follows geometric Brownian motion with drift $\mu\in\R$ and
+volatility $\sigma>0$ if it solves
+\begin{equation}\label{eq:gbmsde}
+   \dd X_t = \mu X_t\,\dt + \sigma X_t\,\dW, \qquad X_0>0.
+\end{equation}
+Referring back to the previous chapter on It\^o Calculus, this is the choice
+$\drift(t,x)=\mu x$, \\$\diff(t,x)=\sigma x$ in the general SDE
+$\dd X_t = \drift(t,X_t)\dt+\diff(t,X_t)\dW$.
+\end{definition}
+
+\begin{remark}[Correspondence with the code]
+  \leavevmode\\
+This is exactly why the pair of functions \texttt{GBM::drift} and
+\texttt{GBM::diffusion} return: \texttt{drift(t,x)} $=\mu x$,
+\texttt{diffusion(t,x)} $=\sigma x$. \texttt{EulerMaruyama} consumes
+these polymorphically through the \texttt{StochasticProcess}
+interface; the sampler derived below is the exact alternative
+to that discretisation, used by \texttt{GBM::sample\_terminal} instead
+of stepping the Euler scheme forward.
+\end{remark}
+\leavevmode\\
+\noindent Both $\drift$ and $\diff$ are affine in $x$, hence globally
+Lipschitz and of linear growth on all of $\R$ (\cref{ass:existence-uniqueness}),
+so \eqref{eq:gbmsde} has a unique strong solution for any $X_0\in\R$. In
+particular this holds for $X_0>0$; positivity of $X_t$ itself is
+established below once the explicit solution is derived.
+
+%--------------------------------------------------------------
+\section{Linearising via It\^o's lemma}
+%--------------------------------------------------------------
+
+The SDE~\eqref{eq:gbmsde} has no constant-coefficient closed form as
+written, because both coefficients scale with $X_t$. The standard fix
+is to apply It\^o's lemma to $\varphi(t,x)=\ln x$: this removes the
+$x$-dependence from both coefficients and turns \eqref{eq:gbmsde} into
+an SDE with constant drift and diffusion, which integrates
+directly.
+
+\begin{theorem}[Exact terminal law of GBM]\label{thm:gbm-exact}
+\leavevmode\\
+Let $X_t$ solve \eqref{eq:gbmsde}. Then for any $T>0$,
+\begin{equation}\label{eq:gbmexact}
+   X_T = X_0\exp\!\left(\Big(\mu-\tfrac12\sigma^2\Big)T + \sigma W_T\right),
+\end{equation}
+where $W_T\sim\mathcal N(0,T)$.
+\end{theorem}
+
+\begin{proof}
+\leavevmode\\
+Apply It\^o's lemma (\cref{thm:ito}) to
+$\varphi(t,x)=\ln x$,
+so:
+\\$\frac{\partial\varphi}{\partial t}=0$, $\frac{\partial\varphi}{\partial x}=\frac{1}{x}$, $\frac{\partial^2\varphi}{\partial x^2}=-\frac{1}{x^2}$. With
+$\drift(t,X_t)=\mu X_t$ and $\diff(t,X_t)=\sigma X_t$,
+\[
+   \dd(\ln X_t)
+     = \Big( 0 + \mu X_t\cdot\frac1{X_t}
+             + \tfrac12\,\sigma^2 X_t^2\cdot\Big(\!-\frac1{X_t^2}\Big) \Big)\dt
+       + \sigma X_t\cdot\frac1{X_t}\,\dW .
+\]
+The $X_t$ factors cancel completely, leaving
+\begin{equation}\label{eq:lnlinear}
+   \dd(\ln X_t) = \Big(\mu-\tfrac12\sigma^2\Big)\dt + \sigma\,\dW .
+\end{equation}
+The right-hand side no longer depends on $X_t$: it is Brownian motion
+with constant drift $\mu-\tfrac12\sigma^2$ and constant volatility
+$\sigma$, so \eqref{eq:lnlinear} integrates directly from $0$ to $T$:
+\[
+   \ln X_T - \ln X_0
+     = \Big(\mu-\tfrac12\sigma^2\Big)T + \sigma\,(W_T-W_0)
+     = \Big(\mu-\tfrac12\sigma^2\Big)T + \sigma W_T,
+\]
+using $W_0=0$. Exponentiating gives \eqref{eq:gbmexact}. Since $W_T\sim
+\mathcal N(0,T)$ by definition of Brownian motion, this is a complete
+description of the law of $X_T$ given $X_0$.
+\end{proof}
+
+\begin{remark}
+  \leavevmode\\
+Equation~\eqref{eq:gbmexact} is sampled with a single normal draw: generate
+$Z\sim\mathcal N(0,1)$, set $W_T=\sqrt T\,Z$, and evaluate the
+right-hand side. No time-stepping is needed, which is what makes it
+an exact sampler rather than a discretisation, and it is exactly
+what \texttt{GBM::sample\_terminal} implements using
+\texttt{NormalRng::draw()}.
+\end{remark}
+
+\begin{remark}[Where the $-\tfrac12\sigma^2$ comes from]
+  \leavevmode\\
+The drift that appears in \eqref{eq:gbmexact} is not $\mu$, the
+drift of $X_t$ itself, but $\mu-\tfrac12\sigma^2$. That correction is
+exactly the $\tfrac12\diff^2 \frac{\partial^2\varphi}{\partial x^2}$ term of It\^o's lemma, which is the term
+with no analogue in ordinary calculus, mentioned in the previous chapter. If one (incorrectly) applied the
+ordinary chain rule to $\ln X_t$, the correction would be missing and
+the resulting sampler would be biased upward in expectation, as
+\cref{prop:gbm-mean} below makes precise.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Moments}
+%--------------------------------------------------------------
+
+The moment-matching test in \texttt{test\_stochastic.cpp} checks
+simulated terminal samples against the following closed-form mean and
+variance.
+
+\begin{lemma}[Moment generating function of a Gaussian]\label{lem:mgf}
+\leavevmode\\
+If $Y\sim\mathcal N(m,v)$ then $\E[e^Y]=\exp\!\big(m+\tfrac12 v\big)$.
+\end{lemma}
+
+
+\begin{proof}
+\leavevmode\\
+Write $Y=m+\sqrt v\,Z$ with $Z\sim\mathcal N(0,1)$. Complete the square
+in the Gaussian integral:
+\[
+   \E[e^Y] = e^m\,\E\big[e^{\sqrt v\,Z}\big]
+           = e^m \int_{-\infty}^{\infty}
+               \frac{1}{\sqrt{2\pi}}\,e^{\sqrt v\,z-\frac12 z^2}\,\dd z
+           = e^m\,e^{\frac12 v}
+             \int_{-\infty}^{\infty}
+               \frac{1}{\sqrt{2\pi}}\,e^{-\frac12(z-\sqrt v)^2}\,\dd z
+           = e^{m+\frac12 v},
+\]
+the last integral being $1$ since it is a $\mathcal N(\sqrt v,1)$
+density integrated over $\R$.
+\end{proof}
+
+\begin{proposition}[Mean of GBM]\label{prop:gbm-mean}
+\leavevmode\\
+$\E[X_T] = X_0\,e^{\mu T}$.
+\end{proposition}
+
+\begin{proof}
+\leavevmode\\
+By \cref{thm:gbm-exact}, $X_T=X_0\,e^Y$ with
+$Y=(\mu-\tfrac12\sigma^2)T+\sigma W_T$.
+\\
+Since $W_T\sim\mathcal N(0,T)$,
+$Y\sim\mathcal N\big((\mu-\tfrac12\sigma^2)T,\ \sigma^2 T\big)$.
+
+\noindent Applying
+\cref{lem:mgf} with $m=(\mu-\tfrac12\sigma^2)T$ and $v=\sigma^2 T$,
+\[
+   \E[X_T] = X_0\,\E[e^Y]
+           = X_0\exp\!\Big( \big(\mu-\tfrac12\sigma^2\big)T + \tfrac12\sigma^2 T \Big)
+           = X_0\,e^{\mu T}.
+\]
+Where the $-\tfrac12\sigma^2 T$ It\^o correction and the $+\tfrac12\sigma^2 T$
+from the moment generating function cancel exactly, leaving the mean
+growing at the "natural" rate $\mu$ despite the correction appearing
+inside every individual path.
+\end{proof}
+
+\begin{proposition}[Variance of GBM]\label{prop:gbm-var}
+\leavevmode\\
+
+$\Var(X_T) = X_0^2\,e^{2\mu T}\big(e^{\sigma^2 T}-1\big)$.
+\end{proposition}
+\medskip
+\begin{proof}
+\leavevmode\\
+$\Var(X_T)=\E[X_T^2]-\big(\E[X_T]\big)^2$.
+\\For the second moment, write
+$X_T^2=X_0^2\,e^{2Y}$ with $Y$ as above, so $2Y\sim\mathcal
+N\big(2(\mu-\tfrac12\sigma^2)T,\ 4\sigma^2 T\big)$. By \cref{lem:mgf}
+with $m=2(\mu-\tfrac12\sigma^2)T$ and $v=4\sigma^2 T$,
+\[
+   \E[X_T^2] = X_0^2\exp\!\Big( 2\big(\mu-\tfrac12\sigma^2\big)T + 2\sigma^2 T \Big)
+             = X_0^2\,e^{(2\mu+\sigma^2)T}.
+\]
+Subtracting $\big(\E[X_T]\big)^2=X_0^2\,e^{2\mu T}$ from
+\cref{prop:gbm-mean} and factoring,
+\[
+   \Var(X_T) = X_0^2\,e^{(2\mu+\sigma^2)T} - X_0^2\,e^{2\mu T}
+             = X_0^2\,e^{2\mu T}\big(e^{\sigma^2 T}-1\big). \qedhere
+\]
+\end{proof}
+
+\begin{remark}[What the test checks]
+  \leavevmode\\
+In the code, \texttt{test\_stochastic.cpp} draws a large number of terminal samples
+from \texttt{GBM::sample\_terminal}, computes their sample mean and
+sample variance, and checks these against
+\cref{prop:gbm-mean,prop:gbm-var} to within Monte Carlo tolerance. This
+is a check on the sampler, not on \eqref{eq:gbmsde} itself ---
+it would catch, for instance, a sign error in the $-\tfrac12\sigma^2$
+correction, since that error changes the mean but leaves the
+qualitative shape of the distribution intact.
+\end{remark}
 
 %--------------------------------------------------------------
 \chapter{The Ornstein--Uhlenbeck Process}
