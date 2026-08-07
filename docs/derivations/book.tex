@@ -248,16 +248,19 @@ which is exactly the claimed $L^2$ convergence.
 
 \begin{remark}
 \leavevmode\\
-The mean computation ($\E[S_\Pi]=T$) shows $(\dW)^2=\dt$ is
-plausible; the variance computation shows it is usable. Note the
-per-step fluctuation is not negligible, $(\Delta W_k)^2$ has
-standard deviation $\sqrt2\,\Delta t_k$, the same order as its own
-mean $\Delta t_k$ --- so the cancellation is a genuine consequence of
-independence across steps, not something true term by term. Inside a
-sum (equivalently, an integral), the random $(\Delta W_k)^2$ may
-therefore be replaced by the deterministic $\Delta t_k$: this
-replacement is the entire content of the shorthand $(\dW)^2=\dt$ used
-in the next section.
+The mean computation ($\E[S_\Pi]=T$) shows the average comes out
+exactly right; the variance computation shows it comes out reliably,
+not just on average. This second part matters because a single term
+is not close to its own mean: $(\Delta W_k)^2$ has standard deviation
+$\sqrt2\,\Delta t_k$, about the same size as its mean $\Delta t_k$
+itself. The reason the full sum $S_\Pi$ still ends up close to $T$ is
+that the terms are independent, so their ups and downs cancel out
+when added together --- this cancellation is what the variance
+computation shows, and it is a property of the sum, not of any single
+term. Inside a sum (equivalently, an integral), the random
+$(\Delta W_k)^2$ may therefore be replaced by the deterministic
+$\Delta t_k$: this replacement is the entire content of the shorthand
+$(\dW)^2=\dt$ used in the next section.
 \end{remark}
 
 %--------------------------------------------------------------
@@ -318,7 +321,7 @@ Let $X_t$ solve \eqref{eq:sde} and let $\varphi(t,x)\in C^{1,2}$. Then
 This is the standard second-order Taylor argument. It is not a proof in the
 strict sense, as a rigorous version requires the construction of the It\^o
 integral \cite[Sec.~4.2.1]{shreve2004}, which is outside the scope of this document.
-The one idea is this: because $\dd X$ carries a Brownian term of size
+The derivation stems around the idea that, because $\dd X$ carries a Brownian term of size
 $\sqrt{\dt}$, a contribution that ordinary calculus discards as ``second
 order'' is in fact first order and must be kept.
 
