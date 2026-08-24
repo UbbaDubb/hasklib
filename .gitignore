@@ -35,6 +35,8 @@ Thumbs.db
 *.fls
 *.fdb_latexmk
 *.synctex.gz
+*.synctex(busy)
+*.buildlog
 *.run.xml
 *.zref
 *.nav
