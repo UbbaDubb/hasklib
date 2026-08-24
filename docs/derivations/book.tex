@@ -22,6 +22,7 @@
 \usepackage{cleveref}
 \usepackage{bm}
 \usepackage{harvard}   % Harvard author-date referencing (with agsm.bst)
+\usepackage{pgf-umlcd} % class diagrams, Section: Library architecture
 
 %---------------- notation macros ----------------
 % (identical to the notation blocks in ito_foundations.tex / gbm.tex / ou.tex / abm.tex / cir.tex / schemes.tex)
@@ -81,7 +82,147 @@ Standard measure-theoretic probability is assumed; see
 
 \tableofcontents
 
+%--------------------------------------------------------------
+\chapter*{Introduction}
+\addcontentsline{toc}{chapter}{Introduction}
+%--------------------------------------------------------------
 
+\section*{Thesis scope}
+
+This document is the mathematical companion to \texttt{hasklib}, a
+C\texttt{++} library built around two intertwined purposes: a thesis
+spine on nonlinear filtering applied to commodity and interest-rate
+models (Schwartz--Smith, G2++), and a pricing showcase in which
+multiple engines --- analytic, Monte Carlo, PDE, binomial tree ---
+converge on the same vanilla option price. The chapters that follow
+build the stochastic-calculus foundations the filtering layer depends
+on: It\^o calculus, then the four processes currently implemented
+(\cref{def:gbm,def:ou}, plus ABM and CIR), then the numerical schemes
+used to simulate them.
+
+\section*{Library architecture}
+
+The \texttt{stochastic/} module is the only part of \texttt{hasklib}
+implemented and tested at the time of writing. It separates two
+concerns: \emph{what} a process is (its drift and diffusion
+coefficients) from \emph{how} it is simulated (the discretisation
+scheme). This mirrors the mathematical separation in
+\cref{def:gbm,def:ou} between the SDE itself and the numerical schemes
+of the final chapter.
+
+\subsection*{Process hierarchy}
+
+Every process derives from an abstract \texttt{Process} base
+exposing only \texttt{drift(t,x)} and \texttt{diffusion(t,x)} ---
+exactly the pair $(\drift,\diff)$ of \cref{eq:sde}. \texttt{GBM} and
+\texttt{ABM} share a $(\mu,\sigma)$ parametrisation; \texttt{OU} and
+\texttt{CIR} share a $(\kappa,\theta,\sigma)$ mean-reverting one.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+
+\begin{abstractclass}[text width=7cm]{Process}{0,0}
+  \attribute{\# m\_x0 : double}
+  \operation{+ Process(x0 : double)}
+  \operation{+ $\sim$Process()}
+  \operation[0]{+ drift(t : double, x : double) const : double}
+  \operation[0]{+ diffusion(t : double, x : double) const : double}
+  \operation{+ X0() const : double}
+\end{abstractclass}
+
+\begin{class}[text width=4cm]{GBM}{-10,-6}
+  \attribute{- m\_mu : double}
+  \attribute{- m\_sigma : double}
+  \operation{+ drift(t, x) const : double}
+  \operation{+ diffusion(t, x) const : double}
+  \inherit{Process}
+\end{class}
+
+\begin{class}[text width=4cm]{ABM}{-4,-6}
+  \attribute{- m\_mu : double}
+  \attribute{- m\_sigma : double}
+  \operation{+ drift(t, x) const : double}
+  \operation{+ diffusion(t, x) const : double}
+  \inherit{Process}
+\end{class}
+
+\begin{class}[text width=4cm]{OU}{2,-6}
+  \attribute{- m\_kappa : double}
+  \attribute{- m\_theta : double}
+  \attribute{- m\_sigma : double}
+  \operation{+ drift(t, x) const : double}
+  \operation{+ diffusion(t, x) const : double}
+  \inherit{Process}
+\end{class}
+
+\begin{class}[text width=4cm]{CIR}{8,-6}
+  \attribute{- m\_kappa : double}
+  \attribute{- m\_theta : double}
+  \attribute{- m\_sigma : double}
+  \operation{+ drift(t, x) const : double}
+  \operation{+ diffusion(t, x) const : double}
+  \inherit{Process}
+\end{class}
+
+\end{tikzpicture}
+\caption{The \texttt{Process} hierarchy. Abstract operations
+(\emph{italic}) are the interface consumed by both the exact samplers
+of \cref{thm:gbm-exact,thm:ou-exact} and the numerical schemes below.}
+\label{fig:process-hierarchy}
+\end{figure}
+
+\subsection*{Scheme--process composition}
+
+Discretisation is deliberately \emph{not} a virtual method on
+\texttt{Process}: \texttt{Scheme} holds a \texttt{Process} by
+reference rather than inheriting from it, so any scheme can drive any
+process without either class knowing about the other's siblings. This
+is the software counterpart of the adapted-process argument underlying
+the Euler--Maruyama scheme, given in full in the final chapter.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}
+
+\begin{abstractclass}[text width=6cm]{Scheme}{-7,0}
+  \attribute{\# m\_process : const Process\&}
+  \operation{+ Scheme(process : const Process\&)}
+  \operation[0]{+ step(t, x, dt, dW : double) const : double}
+\end{abstractclass}
+
+\begin{class}[text width=4.5cm]{EulerMaruyama}{-10,-5}
+  \operation{+ step(t, x, dt, dW) const : double}
+  \inherit{Scheme}
+\end{class}
+
+\begin{class}[text width=4.5cm]{Milstein}{-4,-5}
+  \operation{+ step(t, x, dt, dW) const : double}
+  \inherit{Scheme}
+\end{class}
+
+\begin{abstractclass}[text width=6cm]{Process}{5,0}
+  \operation[0]{+ drift(t, x) const : double}
+  \operation[0]{+ diffusion(t, x) const : double}
+\end{abstractclass}
+
+\aggregation{Scheme}{1}{}{Process}
+
+\end{tikzpicture}
+\caption{Aggregation, not inheritance: a \texttt{Scheme} holds a
+\texttt{Process} reference rather than deriving from it, decoupling
+the two extension axes.}
+\label{fig:scheme-composition}
+\end{figure}
+
+\section*{Document conventions}
+
+Only results the library depends on downstream are stated in full;
+derivations not yet needed are left as
+\textbf{\textcolor{red}{TO DERIVE}} placeholders (see \texttt{TODO} in
+the source). The two diagrams above reflect the state of
+\texttt{stochastic/} only --- \texttt{filter/}, \texttt{optim/}, and
+the pybind11 layer are unbuilt and intentionally absent.
 
 %--------------------------------------------------------------
 \chapter{Foundations: It\^o Calculus and the SDE Framework}
