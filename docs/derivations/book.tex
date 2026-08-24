@@ -610,6 +610,194 @@ qualitative shape of the distribution intact.
 % Source: ou.tex
 
 %--------------------------------------------------------------
+\section{The OU SDE}
+%--------------------------------------------------------------
+
+\begin{definition}[Ornstein--Uhlenbeck process]\label{def:ou}
+$X_t$ follows an Ornstein--Uhlenbeck process with mean-reversion speed
+$\kappa>0$, long-run mean $\theta\in\R$, and volatility $\sigma>0$ if
+it solves
+\begin{equation}\label{eq:ousde}
+   \dd X_t = \kappa(\theta - X_t)\,\dt + \sigma\,\dW, \qquad X_0\in\R.
+\end{equation}
+In the notation of \texttt{ito\_foundations.tex} this is the choice
+$\drift(t,x)=\kappa(\theta-x)$, $\diff(t,x)=\sigma$ (constant) in the
+general SDE $\dd X_t = \drift(t,X_t)\dt+\diff(t,X_t)\dW$.
+\end{definition}
+
+\begin{remark}[Correspondence with the code]
+\texttt{OU::drift} returns $\kappa(\theta-x)$ and
+\texttt{OU::diffusion} returns the constant $\sigma$, independent of
+$x$ --- unlike GBM, the diffusion here does not scale with the state.
+\texttt{EulerMaruyama} can still step this process through the same
+\texttt{StochasticProcess} interface, but as with GBM there is an
+exact alternative, derived below, that \texttt{OU::sample\_terminal}
+uses instead.
+\end{remark}
+
+Both coefficients are affine (in particular globally Lipschitz and of
+linear growth) in $x$, so the existence--uniqueness assumption of
+\texttt{ito\_foundations.tex} applies unconditionally here --- unlike
+GBM, there is no positivity constraint to track, since OU is free to
+take any real value.
+
+%--------------------------------------------------------------
+\section{Exact solution: the integrating-factor trick}
+%--------------------------------------------------------------
+
+Unlike GBM, taking a logarithm does nothing useful here since
+\eqref{eq:ousde} is already linear in $X_t$, not multiplicative. The
+relevant substitution instead is the same one used for linear ODEs:
+multiply by the integrating factor $e^{\kappa t}$ and let It\^o's
+lemma absorb the product rule.
+
+\begin{theorem}[Exact terminal law of OU]\label{thm:ou-exact}
+Let $X_t$ solve \eqref{eq:ousde}. Then for any $T>0$,
+\begin{equation}\label{eq:ouexact}
+   X_T = X_0\,e^{-\kappa T} + \theta\big(1-e^{-\kappa T}\big)
+         + \sigma\, e^{-\kappa T}\!\int_0^T e^{\kappa s}\,\dd W_s .
+\end{equation}
+Conditional on $X_0$, $X_T$ is Gaussian.
+\end{theorem}
+
+\begin{proof}
+Apply It\^o's lemma (Theorem~1 of \texttt{ito\_foundations.tex}) to
+$f(t,x)=e^{\kappa t}x$, so $f_t=\kappa e^{\kappa t}x$, $f_x=e^{\kappa
+t}$, $f_{xx}=0$. With $\drift(t,X_t)=\kappa(\theta-X_t)$ and
+$\diff(t,X_t)=\sigma$,
+\[
+   \dd\big(e^{\kappa t}X_t\big)
+     = \Big(\kappa e^{\kappa t}X_t + \kappa(\theta-X_t)\,e^{\kappa t}
+             + 0\Big)\dt + \sigma\,e^{\kappa t}\,\dW .
+\]
+The $X_t$ terms cancel completely --- $\kappa e^{\kappa t}X_t$ against
+$-\kappa X_t\,e^{\kappa t}$ --- which is precisely the point of the
+integrating factor, leaving
+\begin{equation}\label{eq:oulinear}
+   \dd\big(e^{\kappa t}X_t\big) = \kappa\theta\,e^{\kappa t}\,\dt
+                                   + \sigma\,e^{\kappa t}\,\dW .
+\end{equation}
+The right-hand side no longer involves $X_t$ at all, so
+\eqref{eq:oulinear} integrates directly from $0$ to $T$:
+\[
+   e^{\kappa T}X_T - X_0
+     = \kappa\theta\int_0^T e^{\kappa s}\,\dd s
+       + \sigma\int_0^T e^{\kappa s}\,\dd W_s
+     = \theta\big(e^{\kappa T}-1\big)
+       + \sigma\int_0^T e^{\kappa s}\,\dd W_s .
+\]
+Multiplying by $e^{-\kappa T}$ gives \eqref{eq:ouexact}. The stochastic
+integral $\int_0^T e^{\kappa s}\,\dd W_s$ is a Wiener integral of a
+deterministic integrand, hence Gaussian (a linear functional of a
+Gaussian process); $X_T$ is an affine transformation of it and of the
+deterministic terms, so $X_T$ is Gaussian as well.
+\end{proof}
+
+\begin{lemma}[Moments of a Wiener integral]\label{lem:ito-isometry}
+For deterministic $g\in L^2[0,T]$, the stochastic integral
+$I=\int_0^T g(s)\,\dd W_s$ satisfies $\E[I]=0$ and
+$\Var(I)=\int_0^T g(s)^2\,\dd s$ (the It\^o isometry).
+\end{lemma}
+
+\begin{proof}[Citation]
+This is a standard property of the It\^o integral, following from its
+construction as an $L^2$-limit of Riemann-type sums of independent
+Gaussian increments; see \citeasnoun{shreve2004} or
+\citeasnoun{oksendal2003}. \emph{(Cited, not proved, in the same spirit
+as the existence--uniqueness assumption of \texttt{ito\_foundations.tex}
+--- the library uses the conclusion, not the construction.)}
+\end{proof}
+
+%--------------------------------------------------------------
+\section{Moments and the stationary law}
+%--------------------------------------------------------------
+
+\begin{proposition}[Mean and variance of OU]\label{prop:ou-moments}
+\[
+   \E[X_T\mid X_0] = X_0\,e^{-\kappa T} + \theta\big(1-e^{-\kappa T}\big),
+   \qquad
+   \Var(X_T\mid X_0) = \frac{\sigma^2}{2\kappa}\Big(1-e^{-2\kappa T}\Big).
+\]
+\end{proposition}
+
+\begin{proof}
+Take expectations in \eqref{eq:ouexact}. By \cref{lem:ito-isometry}
+with $g(s)=\sigma e^{-\kappa T}e^{\kappa s}$ (constant $e^{-\kappa T}$
+pulled outside the integral), $\E\big[\int_0^T e^{\kappa
+s}\dd W_s\big]=0$, so the mean is just the deterministic part:
+\[
+   \E[X_T\mid X_0] = X_0\,e^{-\kappa T} + \theta\big(1-e^{-\kappa T}\big).
+\]
+For the variance, only the stochastic term contributes (the rest of
+\eqref{eq:ouexact} is deterministic given $X_0$):
+\[
+   \Var(X_T\mid X_0)
+     = \sigma^2 e^{-2\kappa T}\,\Var\!\left(\int_0^T e^{\kappa s}\,\dd W_s\right)
+     = \sigma^2 e^{-2\kappa T}\int_0^T e^{2\kappa s}\,\dd s ,
+\]
+using \cref{lem:ito-isometry} with $g(s)=e^{\kappa s}$. The integral
+evaluates to $\big(e^{2\kappa T}-1\big)/(2\kappa)$, giving
+\[
+   \Var(X_T\mid X_0)
+     = \sigma^2 e^{-2\kappa T}\cdot\frac{e^{2\kappa T}-1}{2\kappa}
+     = \frac{\sigma^2}{2\kappa}\Big(1-e^{-2\kappa T}\Big). \qedhere
+\]
+\end{proof}
+
+\begin{remark}
+Both the mean and the variance are exactly what
+\texttt{OU::sample\_terminal} needs: draw $Z\sim\mathcal N(0,1)$ once
+and set
+\[
+   X_T = X_0\,e^{-\kappa T} + \theta\big(1-e^{-\kappa T}\big)
+         + \sqrt{\frac{\sigma^2}{2\kappa}\big(1-e^{-2\kappa T}\big)}\;Z,
+\]
+exactly as GBM's exact sampler needed only $Z$ and the closed-form mean
+and variance from \texttt{gbm.tex}. No time-stepping, hence no
+discretisation bias.
+\end{remark}
+
+\begin{corollary}[Stationary law]\label{cor:ou-stationary}
+As $T\to\infty$ (with $\kappa>0$ fixed), $X_T\mid X_0$ converges in
+distribution to
+\[
+   X_\infty \sim \mathcal N\!\left(\theta,\ \frac{\sigma^2}{2\kappa}\right),
+\]
+independent of the starting point $X_0$.
+\end{corollary}
+
+\begin{proof}
+Immediate from \cref{prop:ou-moments}: $e^{-\kappa T}\to 0$ and
+$e^{-2\kappa T}\to 0$ as $T\to\infty$ since $\kappa>0$, so the mean
+$\to\theta$ and the variance $\to\sigma^2/(2\kappa)$, independent of
+$X_0$.
+\end{proof}
+
+\begin{remark}[Why $\kappa>0$ matters]
+The mean-reversion speed $\kappa>0$ is what makes $e^{-\kappa T}\to0$
+and hence guarantees a stationary law at all; it is also what makes OU
+a sensible model for a quantity that fluctuates around a long-run
+level $\theta$ rather than drifting away from it, in contrast to GBM's
+persistent (possibly explosive) drift. If $\kappa\le0$ the process is
+non-stationary and \cref{cor:ou-stationary} does not apply --- the
+library assumes $\kappa>0$ throughout.
+\end{remark}
+
+\begin{remark}[Relevance beyond the pricing showcase]
+OU is not only one of the four processes in the convergence
+demonstration; it is also the driving process behind the Hull--White
+short-rate model, $\dd r_t = \kappa(\theta(t)-r_t)\dt+\sigma\,\dW$,
+used throughout \citeasnoun{brigomercurio2006} for term-structure
+modelling. The only difference from \eqref{eq:ousde} is a
+time-dependent long-run level $\theta(t)$ calibrated to the observed
+yield curve, chosen precisely so that the affine structure exploited in
+\cref{thm:ou-exact} survives with $\theta$ replaced by $\theta(t)$
+inside the integral. This is the model relevant to the callable-note
+decomposition (cancelable payer swap plus receiver swaption) discussed
+elsewhere in this document.
+\end{remark}
+
+%--------------------------------------------------------------
 \chapter{Arithmetic Brownian Motion}
 %--------------------------------------------------------------
 % Source: abm.tex
