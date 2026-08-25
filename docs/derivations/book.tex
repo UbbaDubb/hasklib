@@ -950,9 +950,7 @@ modelling. The only difference from \eqref{eq:ousde} is a
 time-dependent long-run level $\theta(t)$ calibrated to the observed
 yield curve, chosen precisely so that the affine structure exploited in
 \cref{thm:ou-exact} survives with $\theta$ replaced by $\theta(t)$
-inside the integral. This is the model relevant to the callable-note
-decomposition (cancelable payer swap plus receiver swaption) discussed
-elsewhere in this document.
+inside the integral.
 \end{remark}
 
 %--------------------------------------------------------------
@@ -992,7 +990,7 @@ Both GBM and OU needed a substitution to remove an $X_t$-dependence
 from the coefficients before the SDE could be integrated: $\ln x$ for
 GBM, the integrating factor $e^{\kappa t}$ for OU. Here there is
 nothing to remove --- $\mu$ and $\sigma$ are already constants --- so
-the general relation from \texttt{ito\_foundations.tex},
+the general relation from \eqref{eq:sde},
 \[
    X_t = X_0 + \int_0^t \drift(s,X_s)\,\dd s + \int_0^t \diff(s,X_s)\,\dd W_s,
 \]
@@ -1000,6 +998,7 @@ integrates immediately once $\drift=\mu$ and $\diff=\sigma$ are
 substituted.
 
 \begin{theorem}[Exact terminal law of ABM]\label{thm:abm-exact}
+  \leavevmode\\
 Let $X_t$ solve \eqref{eq:abmsde}. Then for any $T>0$,
 \begin{equation}\label{eq:abmexact}
    X_T = X_0 + \mu T + \sigma W_T,
@@ -1011,6 +1010,7 @@ where $W_T\sim\mathcal N(0,T)$, so
 \end{theorem}
 
 \begin{proof}
+  \leavevmode\\
 Substituting $\drift(s,X_s)=\mu$ and $\diff(s,X_s)=\sigma$,
 \[
    X_T = X_0 + \int_0^T \mu\,\dd s + \int_0^T \sigma\,\dd W_s
@@ -1023,13 +1023,6 @@ $X_0+\mu T+\sigma W_T$ is itself Gaussian with mean $X_0+\mu T$ and
 variance $\sigma^2\Var(W_T)=\sigma^2 T$, giving \eqref{eq:abmlaw}.
 \end{proof}
 
-\begin{remark}
-Equation~\eqref{eq:abmlaw} is sampled with a single normal draw:
-generate $Z\sim\mathcal N(0,1)$ and set
-$X_T = X_0+\mu T+\sigma\sqrt T\,Z$. As with \texttt{GBM::sample\_terminal}
-and \texttt{OU::sample\_terminal}, no time-stepping is needed --- this
-is what \texttt{ABM::sample\_terminal} implements.
-\end{remark}
 
 %--------------------------------------------------------------
 \section{Moments and the relation to OU}
@@ -1046,21 +1039,297 @@ accumulates. Correspondingly, $\E[X_T]$ grows in a straight line
 rather than curving toward a long-run level --- there is no $\theta$
 here for it to curve toward.
 
-\begin{remark}[ABM as a degenerate OU process]
-Setting $\kappa=0$ in the OU drift $\kappa(\theta-X_t)$ removes it
-entirely, leaving $\dd X_t=\sigma\,\dW$ --- driftless Brownian motion.
-ABM generalises this by adding back a constant drift $\mu$ that is
-not tied to any mean-reversion mechanism. Equivalently: ABM is
-what OU degenerates into once mean-reversion is switched off, plus an
-unconstrained drift term OU's $\kappa=0$ case does not have on its
-own.
-\end{remark}
-
 
 %--------------------------------------------------------------
 \chapter{The Cox--Ingersoll--Ross Process}
 %--------------------------------------------------------------
-% Source: cir.tex
+%--------------------------------------------------------------
+\section{The CIR SDE}
+%--------------------------------------------------------------
+
+\begin{definition}[Cox--Ingersoll--Ross process]\label{def:cir}
+  \leavevmode\\
+$X_t$ follows a CIR process with mean-reversion speed $\kappa>0$,
+long-run mean $\theta>0$, and volatility $\sigma>0$ if it solves
+\begin{equation}\label{eq:cirsde}
+   \dd X_t = \kappa(\theta - X_t)\,\dt + \sigma\sqrt{X_t}\,\dW,
+   \qquad X_0>0.
+\end{equation}
+In the notation of It\^o from the first chapter, this is
+$\drift(t,x)=\kappa(\theta-x)$ (identical to OU) and
+$\diff(t,x)=\sigma\sqrt{x}$.
+\end{definition}
+
+\begin{remark}[Correspondence with the code]
+  \leavevmode\\
+\texttt{CIR::drift} returns $\kappa(\theta-x)$, exactly matching
+\texttt{OU::drift}. \texttt{CIR::diffusion} returns $\sigma\sqrt{x}$,
+which requires $x\ge0$ to be well-defined --- unlike GBM's $\sigma x$
+or OU's constant $\sigma$, this diffusion coefficient is not defined
+for negative arguments at all, which is the source of every
+complication in this file.
+\end{remark}
+
+\begin{remark}[A genuine gap in the existence--uniqueness story]
+  \leavevmode\\
+The existence--uniqueness \cref{ass:existence-uniqueness}
+requires $\drift$ and $\diff$ to be Lipschitz. $\sqrt{x}$ is
+not Lipschitz near $x=0$ (its slope $\to\infty$ there), so
+that assumption does not literally cover \eqref{eq:cirsde} as stated.
+A strong solution nonetheless exists and is unique --- this requires a
+separate, more delicate existence--uniqueness theory for
+H\"older-continuous (rather than Lipschitz) diffusion coefficients;
+see \citeasnoun{cir1985} or \citeasnoun{brigomercurio2006}. 
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Why the earlier tricks do not apply here}
+%--------------------------------------------------------------
+
+GBM's diffusion $\sigma x$ is proportional to the state, which
+$\ln x$ removed. OU's diffusion $\sigma$ is constant, which the
+integrating factor $e^{\kappa t}$ exploited alongside an affine drift.
+CIR's drift $\kappa(\theta-x)$ is the same affine form as OU's, so the
+integrating factor idea is tempting to reuse --- but it was the
+diffusion term, not the drift, that made OU's trick work cleanly:
+applying It\^o's lemma to $\varphi(t,x)=e^{\kappa t}x$ needs $\varphi_{xx}=0$ to
+kill the second-order term entirely, which held because $\varphi$ was
+linear in $x$. The moment we try to fold $\sigma\sqrt{x}$ into
+any single substitution $\varphi(t,x)$, the resulting $\varphi_{xx}$ term no
+longer vanishes, and no elementary choice of $\varphi$ linearises
+\eqref{eq:cirsde} the way $\ln x$ or $e^{\kappa t}x$ did for the
+earlier processes. This is not a failure of effort --- $\sqrt{x}$ is a
+genuinely different kind of nonlinearity (a square-root, or
+CEV-type, diffusion), and no algebraic trick of this kind exists for
+it in general.
+
+\begin{remark}[The exact law exists, but is out of scope here]
+  \leavevmode\\
+CIR's transition density is nonetheless known exactly: conditional on
+$X_t$, the (scaled) law of $X_{t+\Delta t}$ is a noncentral
+chi-squared distribution, a result following from CIR's connection to
+squared Bessel processes \cite{cir1985}. This is the route
+\texttt{CIR::sample\_terminal} would take for an exact sampler
+(Boost.Math's noncentral chi-squared machinery, per the library's
+\texttt{stats/} layer), analogous to \texttt{GBM::sample\_terminal}
+and \texttt{OU::sample\_terminal}. Deriving that transition density,
+however, requires either the squared-Bessel-process identification or
+a PDE/Laplace-transform argument neither established nor needed
+elsewhere in this document, so it is omitted here.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Moments, via an ODE rather than a path solution}
+%--------------------------------------------------------------
+
+Although no closed-form $X_t$ is derived, its first two moments are
+obtainable directly: take expectations of the SDE (or of It\^o's
+lemma applied to a power of $X_t$) and solve the resulting
+deterministic ODE. This sidesteps needing a path solution at
+all.
+
+\begin{proposition}[Mean of CIR]\label{prop:cir-mean}
+  \leavevmode\\
+Let $m(t)=\E[X_t\mid X_0]$. Then $m(t)$ solves
+$m'(t)=\kappa(\theta-m(t))$ with $m(0)=X_0$, giving
+\[
+   m(t) = X_0\,e^{-\kappa t} + \theta\big(1-e^{-\kappa t}\big),
+\]
+identical in form to OU's mean (\cref{prop:ou-moments}).
+\end{proposition}
+
+\begin{proof}
+  \leavevmode\\
+Taking expectations of the integral form of \eqref{eq:cirsde},
+\[
+   m(t) = X_0 + \kappa\theta\int_0^t \dd s - \kappa\int_0^t m(s)\,\dd s
+        + \E\left[\int_0^t \sigma\sqrt{X_s}\,\dd W_s\right].
+\]
+The stochastic integral has zero expectation (\cref{lem:ito-isometry}
+gives $\E[I]=0$ for the underlying Wiener integral), regardless of the specific form of the
+diffusion coefficient inside it. Differentiating the remaining
+deterministic relation gives $m'(t)=\kappa\theta-\kappa m(t)$ with
+$m(0)=X_0$, exactly the deterministic ODE behind OU's mean
+(\cref{prop:ou-moments}), with the same solution:
+\[
+   \E[X_t\mid X_0] = X_0\,e^{-\kappa t} + \theta\big(1-e^{-\kappa t}\big). \qedhere
+\]
+\end{proof}
+
+\begin{remark}
+  \leavevmode\\
+The mean depends only on the drift, and CIR's drift is literally the
+same function as OU's; the two processes' means therefore coincide
+exactly, even though their diffusion coefficients --- and hence their
+variances, paths, and positivity properties --- are entirely
+different.
+\end{remark}
+
+\begin{proposition}[Variance of CIR]\label{prop:cir-var}
+  \leavevmode\\
+Let $v(t)=\Var(X_t\mid X_0)$. Then
+\[
+   v(t) = \frac{\sigma^2 X_0}{\kappa}\Big(e^{-\kappa t}-e^{-2\kappa t}\Big)
+        + \frac{\sigma^2\theta}{2\kappa}\Big(1-e^{-\kappa t}\Big)^2 .
+\]
+\end{proposition}
+
+\begin{proof}
+Apply It\^o's lemma to $f(x)=x^2$: $f_x=2x$, $f_{xx}=2$, $f_t=0$.
+With $\drift=\kappa(\theta-X_t)$ and $\diff=\sigma\sqrt{X_t}$,
+\[
+   \dd(X_t^2)
+     = \Big(2X_t\cdot\kappa(\theta-X_t) + \tfrac12\cdot\sigma^2 X_t\cdot 2\Big)\dt
+       + 2X_t\cdot\sigma\sqrt{X_t}\,\dW
+     = \big(2\kappa\theta X_t - 2\kappa X_t^2 + \sigma^2 X_t\big)\dt
+       + 2\sigma X_t^{3/2}\,\dW .
+\]
+Taking expectations and writing $w(t)=\E[X_t^2]$, the stochastic term
+again vanishes in expectation, giving
+\[
+   w'(t) = \big(2\kappa\theta+\sigma^2\big)m(t) - 2\kappa\,w(t).
+\]
+Rather than solve for $w(t)$ directly, substitute $w(t)=v(t)+m(t)^2$
+and use $m'(t)=\kappa(\theta-m(t))$ from \Cref{prop:cir-mean} to
+simplify. Differentiating $w=v+m^2$ gives
+$w'=v'+2mm'=v'+2\kappa\theta m-2\kappa m^2$. Substituting into the
+equation for $w'(t)$ and cancelling the $2\kappa\theta\,m(t)$ terms on
+both sides,
+\[
+   v'(t) + 2\kappa\theta\,m(t) - 2\kappa\,m(t)^2 + 2\kappa\big(v(t)+m(t)^2\big)
+     = \big(2\kappa\theta+\sigma^2\big)m(t)
+   \;\;\Longrightarrow\;\;
+   v'(t) + 2\kappa\,v(t) = \sigma^2 m(t),
+\]
+with $v(0)=0$ (since $X_0$ is a fixed starting point, not itself
+random). This is a much cleaner ODE than the one for $w(t)$: the
+$\theta$-dependence has been absorbed entirely into $m(t)$, which is
+already known. Solve by the same integrating-factor technique used
+for OU's SDE, now applied to this ordinary (non-stochastic) ODE:
+multiplying by $e^{2\kappa t}$ collapses the left side into
+$\tfrac{\dd}{\dd t}\big(e^{2\kappa t}v(t)\big)$, and substituting
+$m(t)$ from \Cref{prop:cir-mean} and integrating from $0$ to $t$
+(using $v(0)=0$) gives, after simplification,
+\[
+   v(t) = \frac{\sigma^2 X_0}{\kappa}\big(e^{-\kappa t}-e^{-2\kappa t}\big)
+        + \frac{\sigma^2\theta}{2\kappa}\big(1-e^{-\kappa t}\big)^2,
+\]
+which is the claimed formula. \emph{(The intermediate integrating-factor
+algebra is routine and omitted; it is the same mechanical steps as the
+OU variance derivation in \cref{prop:ou-moments}, applied to this ODE instead
+of directly to the SDE.)}
+\end{proof}
+
+\begin{remark}[What this moment computation buys, and what it does not]
+\Cref{prop:cir-mean,prop:cir-var} give exact first and second moments
+with no approximation --- useful for moment-matching tests analogous
+to \texttt{test\_stochastic.cpp}'s GBM check. They do not give
+the full distribution of $X_t$: CIR is not Gaussian (unlike OU or
+ABM), since $\sqrt{X_t}$ scales the noise unevenly across the state
+space. Recovering the full law requires the noncentral chi-squared
+transition density flagged above, not this ODE method.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{The Feller condition}
+%--------------------------------------------------------------
+
+\begin{theorem}[Feller condition]\label{thm:feller}
+If $2\kappa\theta \ge \sigma^2$, then $X_t>0$ for all $t\ge0$, almost
+surely, given $X_0>0$. If $2\kappa\theta < \sigma^2$, $X_t$ can reach
+$0$ in finite time (though it is instantaneously reflected back into
+$(0,\infty)$ by the drift, since $\drift(t,0)=\kappa\theta>0$).
+\end{theorem}
+
+\begin{proof}[Citation]
+This is Feller's boundary classification for one-dimensional
+diffusions, applied to \eqref{eq:cirsde}; see \citeasnoun{cir1985} or
+\citeasnoun{brigomercurio2006}. \emph{(Cited, not proved --- the proof
+requires the scale-function/speed-measure machinery for
+one-dimensional diffusions, which nothing else in this note depends
+on.)}
+\end{proof}
+
+\begin{remark}[Why this condition matters here specifically]
+Every other assumption in this companion (Lipschitz coefficients,
+$\kappa>0$ for OU's stationary law) has been a technical convenience.
+This one is load-bearing in a different way: \eqref{eq:cirsde} is not
+even well-defined pathwise if $X_t$ goes negative, since
+$\sqrt{X_t}$ has no real value there. The Feller condition is what
+guarantees the SDE never has to confront that question in continuous
+time. Nothing in \texttt{hasklib} currently enforces
+$2\kappa\theta\ge\sigma^2$ on constructing a \texttt{CIR} instance;
+whether to validate it, and what to do if a calibrated parameter set
+violates it (a common occurrence in practice), is a live design
+question, not a settled one.
+\end{remark}
+
+\begin{remark}[Relevance beyond the pricing showcase]
+CIR is, alongside Hull--White, one of the classical short-rate models
+in \citeasnoun{brigomercurio2006} --- valued for keeping rates
+strictly positive when the Feller condition holds, in contrast to
+Hull--White's Gaussian (and hence potentially negative) short rate.
+The parameter tension is real: market-calibrated CIR parameters
+frequently fail the Feller condition, which is precisely why the
+numerical scheme discussed next is not a mere implementation detail.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{Motivation for full truncation}
+%--------------------------------------------------------------
+
+Even when the Feller condition holds and the true process $X_t$
+never reaches zero, a naive Euler--Maruyama discretisation
+(\texttt{schemes.tex}) can still fail: the update
+\[
+   \hat X_{t+\Delta t} = \hat X_t + \kappa(\theta-\hat X_t)\,\Delta t
+                          + \sigma\sqrt{\hat X_t}\,\sqrt{\Delta t}\,Z
+\]
+has no mechanism preventing $\hat X_{t+\Delta t}<0$ for an unlucky
+draw of $Z$ --- and once that happens, $\sqrt{\hat X_{t+\Delta t}}$ at
+the next step is not a real number at all. This is a
+discretisation artefact: it can occur even when the Feller condition
+guarantees the true continuous-time process stays positive, simply
+because a discrete-time approximation is not required to inherit that
+guarantee.
+
+\begin{definition}[Full truncation scheme]\label{def:fulltrunc}
+Write $x^+=\max(x,0)$. The full truncation Euler scheme
+\citeasnoun{lord2010} replaces every appearance of $\hat X_t$
+inside the drift and diffusion evaluations --- but not the running
+value being updated itself --- by its positive part:
+\[
+   \hat X_{t+\Delta t} = \hat X_t + \kappa\big(\theta-\hat X_t^+\big)\,\Delta t
+                          + \sigma\sqrt{\hat X_t^+}\,\sqrt{\Delta t}\,Z .
+\]
+\end{definition}
+
+\begin{remark}[Why both terms are truncated, not just the diffusion]
+An earlier, more obvious fix (partial truncation) replaces
+$\hat X_t$ by $\hat X_t^+$ only inside the square root, leaving the
+drift's mean-reversion term $\kappa(\theta-\hat X_t)$ using the raw
+(possibly negative) value. \citeasnoun{lord2010} found this still
+carries a systematic bias, and their contribution was to show that
+truncating the drift's evaluation as well --- \Cref{def:fulltrunc}
+--- reduces that bias further, at no extra implementation cost. The
+running value $\hat X_t$ itself is still allowed to go negative and
+stay negative for a stretch (it is only clipped where it is
+used, inside the coefficient evaluations); this is a
+deliberate feature of the scheme, not an oversight, and is what
+distinguishes ``full'' from ``partial'' truncation.
+\end{remark}
+
+\begin{remark}[Correspondence with the code]
+This is the discretisation \texttt{hasklib}'s roadmap specifies for
+CIR (OU~$\to$~ABM~$\to$~CIR with full truncation~$\to$~Milstein), in
+preference to plain \texttt{EulerMaruyama::step} applied naively:
+wherever \texttt{CIR::drift}/\texttt{CIR::diffusion} are evaluated
+inside a stepping scheme, the state passed in should be $\hat X_t^+$,
+not $\hat X_t$ directly. Establishing the strong-order convergence
+properties of this scheme is a separate question from motivating it
+and is not addressed here.
+\end{remark}
+
 
 %--------------------------------------------------------------
 \chapter{Numerical Schemes: Euler--Maruyama and Milstein}
