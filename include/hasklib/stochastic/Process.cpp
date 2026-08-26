@@ -4,6 +4,13 @@
 // Constructors/Destructor
 StochasticProcess::StochasticProcess() {}
 
+StochasticProcess::StochasticProcess(const StochasticProcess& source) {}
+
+StochasticProcess& StochasticProcess::operator=(const StochasticProcess& source)
+{
+    return *this;
+}
+
 StochasticProcess::~StochasticProcess() {}
 
 // Diffusion derivative to be implemented by derived classes

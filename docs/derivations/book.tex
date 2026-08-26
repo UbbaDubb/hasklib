@@ -1079,7 +1079,7 @@ that assumption does not literally cover \eqref{eq:cirsde} as stated.
 A strong solution nonetheless exists and is unique --- this requires a
 separate, more delicate existence--uniqueness theory for
 H\"older-continuous (rather than Lipschitz) diffusion coefficients;
-see \citeasnoun{cir1985} or \citeasnoun{brigomercurio2006}. 
+see \citeasnoun{cir1985} or \citeasnoun{brigomercurio2006}.
 \end{remark}
 
 %--------------------------------------------------------------
@@ -1101,22 +1101,8 @@ longer vanishes, and no elementary choice of $\varphi$ linearises
 earlier processes. This is not a failure of effort --- $\sqrt{x}$ is a
 genuinely different kind of nonlinearity (a square-root, or
 CEV-type, diffusion), and no algebraic trick of this kind exists for
-it in general.
-
-\begin{remark}[The exact law exists, but is out of scope here]
-  \leavevmode\\
-CIR's transition density is nonetheless known exactly: conditional on
-$X_t$, the (scaled) law of $X_{t+\Delta t}$ is a noncentral
-chi-squared distribution, a result following from CIR's connection to
-squared Bessel processes \cite{cir1985}. This is the route
-\texttt{CIR::sample\_terminal} would take for an exact sampler
-(Boost.Math's noncentral chi-squared machinery, per the library's
-\texttt{stats/} layer), analogous to \texttt{GBM::sample\_terminal}
-and \texttt{OU::sample\_terminal}. Deriving that transition density,
-however, requires either the squared-Bessel-process identification or
-a PDE/Laplace-transform argument neither established nor needed
-elsewhere in this document, so it is omitted here.
-\end{remark}
+it in general. A closed-form path solution is out of reach; the next
+section recovers what can be obtained without one.
 
 %--------------------------------------------------------------
 \section{Moments, via an ODE rather than a path solution}
@@ -1226,8 +1212,8 @@ with no approximation --- useful for moment-matching tests analogous
 to \texttt{test\_stochastic.cpp}'s GBM check. They do not give
 the full distribution of $X_t$: CIR is not Gaussian (unlike OU or
 ABM), since $\sqrt{X_t}$ scales the noise unevenly across the state
-space. Recovering the full law requires the noncentral chi-squared
-transition density flagged above, not this ODE method.
+space. Recovering the full law requires the exact transition density
+given in \Cref{sec:cir-transition} below, not this ODE method.
 \end{remark}
 
 %--------------------------------------------------------------
@@ -1271,7 +1257,64 @@ strictly positive when the Feller condition holds, in contrast to
 Hull--White's Gaussian (and hence potentially negative) short rate.
 The parameter tension is real: market-calibrated CIR parameters
 frequently fail the Feller condition, which is precisely why the
-numerical scheme discussed next is not a mere implementation detail.
+numerical scheme discussed later is not a mere implementation detail.
+\end{remark}
+
+%--------------------------------------------------------------
+\section{The exact transition law}\label{sec:cir-transition}
+%--------------------------------------------------------------
+
+\begin{proposition}[Exact transition law of CIR]\label{prop:cir-transition}
+  \leavevmode\\
+Conditional on $X_t$, the scaled law of $X_{t+\Delta t}$ is a
+noncentral chi-squared distribution: writing
+\[
+   c = \frac{\sigma^2\big(1-e^{-\kappa\Delta t}\big)}{4\kappa}, \qquad
+   d = \frac{4\kappa\theta}{\sigma^2}, \qquad
+   \lambda = \frac{4\kappa e^{-\kappa\Delta t}}{\sigma^2\big(1-e^{-\kappa\Delta t}\big)}\,X_t,
+\]
+then
+\[
+   X_{t+\Delta t} \mid X_t \;\sim\; c\cdot\chi'^2_d(\lambda),
+\]
+where $\chi'^2_d(\lambda)$ denotes noncentral chi-squared with $d$
+degrees of freedom and noncentrality $\lambda$. This follows from
+CIR's connection to squared Bessel processes \cite{cir1985}; the
+identification itself is cited, not derived, here (it requires either
+the squared-Bessel-process argument or a PDE/Laplace-transform
+argument neither established nor needed elsewhere in this document).
+\end{proposition}
+
+\begin{remark}[Sampling via the Poisson-mixture representation]
+  \leavevmode\\
+A noncentral $\chi'^2_d(\lambda)$ variable admits a standard
+representation as a Poisson mixture of central chi-squared variables:
+draw $N\sim\mathrm{Poisson}(\lambda/2)$, then, conditional on $N$,
+draw a central $\chi^2_{d+2N}$ variable --- equivalently a
+$\mathrm{Gamma}\big(\tfrac{d}{2}+N,\,2\big)$ variable in shape/scale
+form. \texttt{CIR::sample\_terminal} implements
+\Cref{prop:cir-transition} exactly this way: a Poisson draw followed
+by a Gamma draw, scaled by $c$, using direct samplers from the
+standard library rather than a numerical inversion of the noncentral
+chi-squared CDF. No Boost.Math distribution object is required for
+sampling itself; Boost.Math would only be needed if the density or
+CDF at a point were wanted directly, which \texttt{sample\_terminal}
+does not do.
+\end{remark}
+
+\begin{remark}[Where this connects back to Feller]
+  \leavevmode\\
+The degrees-of-freedom parameter $d=4\kappa\theta/\sigma^2$ is exactly
+twice the quantity appearing in \Cref{thm:feller}: the Feller
+condition $2\kappa\theta\ge\sigma^2$ is precisely $d\ge2$. When Feller
+fails ($d<2$), the noncentral chi-squared distribution develops
+increasing mass near the origin, mirroring $X_t$'s tendency to
+approach $0$ in continuous time. The Poisson-mixture sampler above
+remains exact in this regime --- it involves no numerical
+root-finding that could degrade --- so, unlike an inversion-based
+sampler, \texttt{sample\_terminal} is not a source of additional
+numerical concern precisely where Feller-violating, market-calibrated
+parameters (noted above) are most likely to arise.
 \end{remark}
 
 %--------------------------------------------------------------
@@ -1291,7 +1334,11 @@ the next step is not a real number at all. This is a
 discretisation artefact: it can occur even when the Feller condition
 guarantees the true continuous-time process stays positive, simply
 because a discrete-time approximation is not required to inherit that
-guarantee.
+guarantee. Note that \Cref{prop:cir-transition} does not resolve this
+problem: it gives an exact sampler for the terminal law at a single
+horizon, not a path-generating recursion --- the discretisation
+question below concerns simulating a full path, for which the scheme
+of \Cref{def:fulltrunc}, not the transition law, is the relevant tool.
 
 \begin{definition}[Full truncation scheme]\label{def:fulltrunc}
 Write $x^+=\max(x,0)$. The full truncation Euler scheme

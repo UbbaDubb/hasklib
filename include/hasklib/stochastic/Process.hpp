@@ -5,6 +5,10 @@
 
 class StochasticProcess
 {
+protected:
+    StochasticProcess(const StochasticProcess& source);
+    StochasticProcess& operator=(const StochasticProcess& source);
+
 public:
     // Constructors/Destructor
     StochasticProcess();
