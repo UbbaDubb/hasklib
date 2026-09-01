@@ -18,6 +18,7 @@
 \usepackage{mathtools}
 \usepackage[a4paper, margin=1in]{geometry}
 \usepackage{xcolor}
+\usepackage{graphicx} % \resizebox for scaling wide tikz diagrams to \textwidth
 \usepackage{hyperref}
 \usepackage{cleveref}
 \usepackage{bm}
@@ -120,6 +121,7 @@ exactly the pair $(\drift,\diff)$ of \cref{eq:sde}. \texttt{GBM} and
 
 \begin{figure}[h]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
 
 \begin{abstractclass}[text width=7cm]{Process}{0,0}
@@ -165,7 +167,8 @@ exactly the pair $(\drift,\diff)$ of \cref{eq:sde}. \texttt{GBM} and
   \inherit{Process}
 \end{class}
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{The \texttt{Process} hierarchy. Abstract operations
 (\emph{italic}) are the interface consumed by both the exact samplers
 of \cref{thm:gbm-exact,thm:ou-exact} and the numerical schemes below.}
@@ -183,6 +186,7 @@ the Euler--Maruyama scheme, given in full in the final chapter.
 
 \begin{figure}[h]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
 
 \begin{abstractclass}[text width=6cm]{Scheme}{-7,0}
@@ -208,7 +212,8 @@ the Euler--Maruyama scheme, given in full in the final chapter.
 
 \aggregation{Scheme}{1}{}{Process}
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \caption{Aggregation, not inheritance: a \texttt{Scheme} holds a
 \texttt{Process} reference rather than deriving from it, decoupling
 the two extension axes.}

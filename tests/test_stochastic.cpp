@@ -89,10 +89,12 @@ int main()
                    << "  Euler mean=" << eMean << " (err=" << meanErr << ")"
                    << "  Euler var="  << eVar  << " (err=" << varErr  << ")\n";
 
-        // With only 10 steps, Euler mean can already be close since
-        // GBM's drift term is exact in expectation for Euler; the
-        // variance is the more sensitive discretisation check.
-        // Loosen tolerance at low N, tighten as N grows.
+        /*
+         * With only 10 steps, Euler mean can already be close since
+         * GBM's drift term is exact in expectation for Euler; the
+         * variance is the more sensitive discretisation check.
+         * Loosen tolerance at low N, tighten as N grows.
+         */
         double meanTolEuler = 0.10 * exactMean;
         double varTolEuler  = 0.25 * exactVar;
 
