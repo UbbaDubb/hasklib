@@ -3,31 +3,38 @@
 #include <utility>
 #include <variant>
 
-namespace hasklib::core {
+namespace hasklib::core
+{
+/*
+A Result<T, E> for explicit, exception-light error handling.
+Result<double, ErrorCode> r = Result<...>::ok(1.5);
+if (r.is_ok()) use(r.value()); else handle(r.error());
 
-// A tiny Result<T, E> for explicit, exception-light error handling.
-//   Result<double, ErrorCode> r = Result<...>::ok(1.5);
-//   if (r.is_ok()) use(r.value()); else handle(r.error());
-//
-// Uses in_place_index so it is well-formed even when T and E coincide.
+Uses in_place_index so it is well-formed even when T and E coincide.
+ */
 template <class T, class E>
-class Result {
+class Result
+{
  public:
-  static Result ok(T value) {
+  static Result ok(T value)
+  {
     return Result(std::in_place_index<0>, std::move(value));
   }
-  static Result err(E error) {
+  static Result err(E error)
+  {
     return Result(std::in_place_index<1>, std::move(error));
   }
 
   bool is_ok()  const noexcept { return data_.index() == 0; }
   bool is_err() const noexcept { return data_.index() == 1; }
 
-  const T& value() const {
+  const T& value() const
+  {
     if (is_err()) throw std::logic_error("Result::value() called on an error");
     return std::get<0>(data_);
   }
-  const E& error() const {
+  const E& error() const
+  {
     if (is_ok()) throw std::logic_error("Result::error() called on an ok value");
     return std::get<1>(data_);
   }
