@@ -1,7 +1,7 @@
 // CIR.hpp
 #ifndef CIR_H
 #define CIR_H
-#include "Process.hpp"
+#include "StochasticProcess.hpp"
 
 class CIR : public StochasticProcess
 {

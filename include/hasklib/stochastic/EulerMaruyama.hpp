@@ -1,7 +1,7 @@
 // EulerMaruyama.hpp
 #ifndef EULERMARUYAMA_H
 #define EULERMARUYAMA_H
-#include "Process.hpp"
+#include "StochasticProcess.hpp"
 #include "hasklib/random/NormalRng.hpp"
 
 class EulerMaruyama

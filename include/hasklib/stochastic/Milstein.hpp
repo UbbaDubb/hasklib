@@ -1,7 +1,7 @@
 // Milstein.hpp
 #ifndef MILSTEIN_H
 #define MILSTEIN_H
-#include "Process.hpp"
+#include "StochasticProcess.hpp"
 #include "hasklib/random/NormalRng.hpp"
 
 class Milstein  
