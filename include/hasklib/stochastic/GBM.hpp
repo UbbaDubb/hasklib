@@ -1,7 +1,7 @@
 // GBM.hpp
 #ifndef GBM_H
 #define GBM_H
-#include "hasklib/stochastic/Process.hpp"
+#include "hasklib/stochastic/StochasticProcess.hpp"
 #include "hasklib/random/NormalRng.hpp"
 
 class GBM : public StochasticProcess

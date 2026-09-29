@@ -1,7 +1,7 @@
 // OU.hpp
 #ifndef OU_H
 #define OU_H
-#include "Process.hpp"
+#include "StochasticProcess.hpp"
 #include "hasklib/random/NormalRng.hpp"
 
 class OU : public StochasticProcess

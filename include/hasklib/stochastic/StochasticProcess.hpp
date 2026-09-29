@@ -1,0 +1,24 @@
+// StochasticProcess.hpp
+#ifndef STOCHASTIC_PROCESS_H
+#define STOCHASTIC_PROCESS_H
+#include "hasklib/core/types.hpp"
+
+class StochasticProcess
+{
+protected:
+    StochasticProcess(const StochasticProcess& source);
+    StochasticProcess& operator=(const StochasticProcess& source);
+
+public:
+    // Constructors/Destructor
+    StochasticProcess();
+    virtual ~StochasticProcess();
+
+    // Pure virtual functions for abstract class
+    virtual double drift(double t, double x) const = 0;
+    virtual double diffusion(double t, double x) const = 0;
+
+    // Diffusion derivative to be implemented by derived classes
+    virtual double diffusion_derivative(double t, double x) const;
+};
+#endif

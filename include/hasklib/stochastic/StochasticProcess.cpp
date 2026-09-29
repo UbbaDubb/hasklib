@@ -1,5 +1,5 @@
-// Process.cpp
-#include "Process.hpp"
+// StochasticProcess.cpp
+#include "StochasticProcess.hpp"
 
 // Constructors/Destructor
 StochasticProcess::StochasticProcess() {}

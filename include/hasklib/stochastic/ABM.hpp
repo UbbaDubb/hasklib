@@ -1,7 +1,7 @@
 // ABM.hpp
 #ifndef ABM_H
 #define ABM_H
-#include "Process.hpp"
+#include "StochasticProcess.hpp"
 #include "hasklib/random/NormalRng.hpp"
 
 class ABM : public StochasticProcess 
