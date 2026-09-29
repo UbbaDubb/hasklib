@@ -1069,7 +1069,7 @@ $\diff(t,x)=\sigma\sqrt{x}$.
   \leavevmode\\
 \texttt{CIR::drift} returns $\kappa(\theta-x)$, exactly matching
 \texttt{OU::drift}. \texttt{CIR::diffusion} returns $\sigma\sqrt{x}$,
-which requires $x\ge0$ to be well-defined --- unlike GBM's $\sigma x$
+which requires $x\ge0$ to be well-defined, unlike GBM's $\sigma x$
 or OU's constant $\sigma$, this diffusion coefficient is not defined
 for negative arguments at all, which is the source of every
 complication in this file.
@@ -1080,15 +1080,15 @@ complication in this file.
 The existence--uniqueness \cref{ass:existence-uniqueness}
 requires $\drift$ and $\diff$ to be Lipschitz. $\sqrt{x}$ is
 not Lipschitz near $x=0$ (its slope $\to\infty$ there), so
-that assumption does not literally cover \eqref{eq:cirsde} as stated.
-A strong solution nonetheless exists and is unique --- this requires a
+that assumption does not cover \eqref{eq:cirsde}.
+A strong solution nonetheless exists and is unique. This requires a
 separate, more delicate existence--uniqueness theory for
 H\"older-continuous (rather than Lipschitz) diffusion coefficients;
 see \citeasnoun{cir1985} or \citeasnoun{brigomercurio2006}.
 \end{remark}
 
 %--------------------------------------------------------------
-\section{Why the earlier tricks do not apply here}
+\section{Why this requires a new solution}
 %--------------------------------------------------------------
 
 GBM's diffusion $\sigma x$ is proportional to the state, which
@@ -1103,11 +1103,9 @@ linear in $x$. The moment we try to fold $\sigma\sqrt{x}$ into
 any single substitution $\varphi(t,x)$, the resulting $\varphi_{xx}$ term no
 longer vanishes, and no elementary choice of $\varphi$ linearises
 \eqref{eq:cirsde} the way $\ln x$ or $e^{\kappa t}x$ did for the
-earlier processes. This is not a failure of effort --- $\sqrt{x}$ is a
-genuinely different kind of nonlinearity (a square-root, or
-CEV-type, diffusion), and no algebraic trick of this kind exists for
-it in general. A closed-form path solution is out of reach; the next
-section recovers what can be obtained without one.
+earlier processes. $\sqrt{x}$ is a
+genuinely different kind of nonlinearity, and no algebraic trick of this kind exists for
+it in general, therefore a closed-form path solution is out of reach.
 
 %--------------------------------------------------------------
 \section{Moments, via an ODE rather than a path solution}
